@@ -1,0 +1,8 @@
+data/
+.venv/
+Focus1/
+models/
+
+test/__pycache__
+
+zip/

@@ -1,6 +1,6 @@
 import threading
 from queue import Queue
-from realsense_frame import realsense_get_frame, realsense_init
+from .realsense_frame import realsense_get_frame, realsense_init
 
 class RealSenseStream:
     def __init__(self, width = 640, height = 480, fps = 15, enable_imu = False, max_queue_size=1):

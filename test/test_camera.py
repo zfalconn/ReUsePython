@@ -1,13 +1,21 @@
 
-from vision import realsense_get_frame, realsense_init
+import sys
+import os
 import cv2
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from vision import realsense_get_frame, realsense_init
+
+
+
 
 
 pipeline, depth_scale = realsense_init()
 
 try:
     while True:
-        color_img, depth_img = realsense_get_frame()
+        color_img, depth_img = realsense_get_frame(pipeline)
 
         if color_img is None or depth_img is None:
             continue

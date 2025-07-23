@@ -3,6 +3,9 @@ from queue import Queue
 from .realsense_frame import realsense_get_frame, realsense_init
 
 class RealSenseStream:
+    """
+    RealSenseStream class to start threaded acquistion
+    """
     def __init__(self, width = 640, height = 480, fps = 15, enable_imu = False, max_queue_size=1):
         self.pipeline, self.depth_scale = realsense_init(width, height, fps, enable_imu)
         self.frame_queue = Queue(maxsize=max_queue_size)

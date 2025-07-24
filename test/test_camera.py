@@ -28,13 +28,22 @@ def display_loop(camera, model, running_flag):
 
 
 if __name__ == "__main__":
+    
+    # Test decoupling of camera acquisitions and detection
+    # Further development can put camera and detection on different processes
+    # Refactor code for cleaner variables calling such as model definition, 
+    # which can be moved to a separate file or some kind of config
+    # 
+
     ### INIT CAMERA AND DETECTION MODEL ###
     camera = RealSenseStream(fps=30)
     model = YOLO(r"..\models\focus1\Focus1_YOLO11n_x1024_14112024_ncnn_model")
-    
+    ### ----- ----- ----- ###
+
     ### START ACQUISTION THREAD ###
     camera.start() 
-    
+    ### ----- ----- ----- ###
+
     ### START DETECTION THREAD ###
     running_flag = {"run": True}
     display_thread = threading.Thread(target=display_loop, args=(camera,model,running_flag), daemon=True)

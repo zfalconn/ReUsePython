@@ -13,12 +13,12 @@ class RealSenseStream:
 
     def _capture_loop(self):
         while self.running:
-            color_frame, depth_Frame = realsense_get_frame(self.pipeline)
+            color_frame, depth_frame = realsense_get_frame(self.pipeline)
 
-            if color_frame is not None:
+            if color_frame is not None and depth_frame is not None:
                 if not self.frame_queue.full():
                     # Add frame to queue
-                    self.frame_queue.put((color_frame,depth_Frame))
+                    self.frame_queue.put((color_frame,depth_frame))
 
     def start(self):
         self.running = True

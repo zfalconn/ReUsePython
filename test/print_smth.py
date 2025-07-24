@@ -9,3 +9,6 @@ def print_num():
     end_time = time.perf_counter()
 
     print(f"Process finished in {round(end_time-start_time, 2)} second(s)")
+
+
+    

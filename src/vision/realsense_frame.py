@@ -62,7 +62,7 @@ def realsense_get_frame(pipeline):
         return None, None
 
     color_frame = np.asanyarray(color_frame.get_data())
-    depth_frame = np.asanyarray(depth_frame.get_data())
+    #depth_frame = np.asanyarray(depth_frame.get_data())
 
 
     return color_frame, depth_frame

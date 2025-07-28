@@ -1,16 +1,19 @@
 from ultralytics import YOLO
 import cv2
 import pyrealsense2 as rs
+# import sys
+# import os
+
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
-
-def detection_xyz(model : YOLO , color_frame, depth_frame, confidence=0.7):
+def detection_xyz(model : YOLO , color_frame, depth_frame, **yolo_args):
     
     """
     Perform objection detection and generate XYZ coordinates
 
     """
-    results = model(color_frame, conf=confidence)[0]
+    results = model(color_frame, **yolo_args)[0]
 
     detections = []
     intrinsics = depth_frame.profile.as_video_stream_profile().get_intrinsics()
@@ -56,3 +59,6 @@ def draw_detections(color_frame, detections):
                     (x1, y2 + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
     
     return color_frame
+
+if __name__ == "__main__":
+    model = YOLO(r"..\models\focus1\Focus1_YOLO11n_x1024_14112024_ncnn_model")

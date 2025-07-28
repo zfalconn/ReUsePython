@@ -27,6 +27,7 @@ class RealSenseStream:
 
     def stop(self):
         self.running = False
+        self.thread.join()
         self.pipeline.stop()
 
     def get_latest_frame(self):
@@ -34,4 +35,7 @@ class RealSenseStream:
         while not self.frame_queue.empty():
             latest = self.frame_queue.get()
         return latest
+
+    def get_frame_queue(self):
+        return self.frame_queue
 

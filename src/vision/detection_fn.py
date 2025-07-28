@@ -26,8 +26,14 @@ def detection_xyz(model : YOLO , color_frame, depth_frame, **yolo_args):
         cy = int((y1 + y2) / 2)
 
         # Get depth at bounding box center
+        
+        width = depth_frame.get_width()
+        height = depth_frame.get_height()
+        # Clamping to prevent out of range
+        cx = max(0, min(cx, width - 1))
+        cy = max(0, min(cy, height - 1))
         depth = depth_frame.get_distance(cx, cy)
-
+        
         # Deproject to 3D point
         
         point_3d = rs.rs2_deproject_pixel_to_point(intrinsics, [cx, cy], depth)

@@ -8,9 +8,11 @@ from ultralytics import YOLO
 # Add the project root to the sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.vision.RealSenseStream import RealSenseStream
-from src.vision.detection import detection_xyz, draw_detections
+from src.vision.realsense_stream import RealSenseStream
+from src.vision.detection_fn import detection_xyz, draw_detections
 import cv2
+
+from src.vision.object_detection import ObjectDetection
 
 def display_loop(camera, model, running_flag):
     while running_flag["run"]:

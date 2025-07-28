@@ -33,7 +33,6 @@ if __name__ == "__main__":
     # Further development can put camera and detection on different processes
     # Refactor code for cleaner variables calling such as model definition, 
     # which can be moved to a separate file or some kind of config
-    # 
 
     ### INIT CAMERA AND DETECTION MODEL ###
     camera = RealSenseStream(fps=30)

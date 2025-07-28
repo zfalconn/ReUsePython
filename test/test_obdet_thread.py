@@ -15,11 +15,11 @@ from src.vision.object_detection import ObjectDetection
 
 def main():
     try:
-        camera = RealSenseStream(fps=30)
+        camera = RealSenseStream(fps=30, max_queue_size=5)
         camera.start()
         
         model = YOLO(r"..\models\focus1\Focus1_YOLO11n_x1024_14112024_ncnn_model")
-        object_detector = ObjectDetection(model, display=True, max_queue_size=5, conf=0.1)
+        object_detector = ObjectDetection(model, display=True, max_queue_size=1, conf=0.7, device=0, max_det=5)
         
         object_detector.start(camera.get_frame_queue())
 

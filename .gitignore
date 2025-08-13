@@ -9,3 +9,6 @@ zip/
 
 __pycache__/
 *.py[cod]
+
+config.py
+runs

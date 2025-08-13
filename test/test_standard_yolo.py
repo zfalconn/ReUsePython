@@ -3,7 +3,7 @@ import config
 import json
 
 if __name__ == "__main__":
-    model = YOLO(config.MODEL_PATH)
+    model = YOLO(config.MODEL_PATH_NCNN)
 
     metrics = model.val(data=config.DATA_PATH, imgsz = 640, batch=1, device="cpu")
 

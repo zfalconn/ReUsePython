@@ -7,10 +7,8 @@ import time
 # === Initialize RealSense Pipeline ===
 pipeline = rs.pipeline()
 config = rs.config()
-
 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-
 profile = pipeline.start(config)
 
 depth_sensor = profile.get_device().first_depth_sensor()
@@ -28,9 +26,10 @@ try:
     start_time = time.time()
 
     total_latency = 0.0  # total iteration time accumulator
+    avg_latency = 0.0    # initialize rolling average
 
     while True:
-        iter_start = time.time()  # Start time for this iteration
+        iter_start = time.perf_counter()  # high-res timer
 
         # Wait for frames
         frames = pipeline.wait_for_frames()
@@ -43,11 +42,12 @@ try:
 
         color_image = np.asanyarray(color_frame.get_data())
 
+        # Inference
         results = model(color_image, conf=0.7, device='cpu')[0]
 
         # Compute overall FPS
         frame_count += 1
-        elapsed_time = time.time() - start_time
+        elapsed_time = time.perf_counter() - start_time
         fps = frame_count / elapsed_time if elapsed_time > 0 else 0
 
         cv2.putText(color_image, f"FPS: {fps:.2f}", (10, 30),
@@ -78,12 +78,16 @@ try:
 
         cv2.imshow("YOLOv8 + RealSense", color_image)
 
-        iter_end = time.time()  # End time for this iteration
-        iteration_duration = iter_end - iter_start
+        # === Timing ===
+        iter_end = time.perf_counter()
+        iteration_duration = iter_end - iter_start  # per-frame latency
         total_latency += iteration_duration
 
-        avg_latency_ms = (total_latency / frame_count) * 1000
-        print(f"[Frame {frame_count}] Current: {iteration_duration*1000:.2f} ms | Avg: {avg_latency_ms:.2f} ms")
+        # Rolling average (EMA)
+        alpha = 0.1
+        avg_latency = alpha * iteration_duration + (1 - alpha) * avg_latency
+
+        print(f"[Frame {frame_count}] Current: {iteration_duration*1000:.2f} ms | Avg: {avg_latency*1000:.2f} ms | FPS: {fps:.2f}")
 
         if cv2.waitKey(1) == 27:
             break

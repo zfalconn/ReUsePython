@@ -1,4 +1,5 @@
 import threading
+from collections import deque
 from queue import Queue, Empty
 from .detection_fn import detection_xyz, draw_detections
 from ultralytics import YOLO
@@ -14,33 +15,11 @@ class ObjectDetection:
         self.running = False
         self.yolo_args = yolo_args
         
-    
-    
-    # def _detection_loop(self):
-    #     while self.running:
-    #         try:
-    #             color_frame, depth_frame = self.frame_queue.get(timeout=1)
-    #         except Empty:
-    #             continue
-    #         if color_frame is None or depth_frame is None:
-    #             continue
-
-    #         detections = detection_xyz(self.model, color_frame, depth_frame, **self.yolo_args)
-    #         if not self.detections_queue.full():
-    #             self.detections_queue.put(detections)
-
-    #         if self.display:
-    #             annotated_frame = draw_detections(color_frame.copy(), detections)
-    #             cv2.imshow("Bounding Box with XYZ", annotated_frame)
-    #             if cv2.waitKey(1) == 27:  # ESC key to stop
-    #                 self.running = False
-    #                 break
-    #     cv2.destroyAllWindows()
 
     def _detection_loop(self):
-        iteration_count = 0
-        total_wall_time = 0.0
-        total_cpu_time = 0.0
+        window_size = 30  # Number of recent frames to average over
+        wall_times = deque(maxlen=window_size)
+        cpu_times = deque(maxlen=window_size)
 
         while self.running:
             try:
@@ -74,20 +53,19 @@ class ObjectDetection:
             wall_latency_ms = (end_wall - start_wall) * 1000
             cpu_time_ms = (end_cpu - start_cpu) * 1000
 
-            # Update totals for averages
-            iteration_count += 1
-            total_wall_time += wall_latency_ms
-            total_cpu_time += cpu_time_ms
+            # Add to rolling window
+            wall_times.append(wall_latency_ms)
+            cpu_times.append(cpu_time_ms)
 
-            avg_wall_ms = total_wall_time / iteration_count
-            avg_cpu_ms = total_cpu_time / iteration_count
+            # Compute rolling average
+            avg_wall_ms = sum(wall_times) / len(wall_times)
+            avg_cpu_ms = sum(cpu_times) / len(cpu_times)
 
-            print(f"[Frame {iteration_count}] "
+            print(f"[Frame {len(wall_times)}] "
                 f"Wall: {wall_latency_ms:.2f} ms | CPU: {cpu_time_ms:.2f} ms | "
                 f"Avg Wall: {avg_wall_ms:.2f} ms | Avg CPU: {avg_cpu_ms:.2f} ms")
 
         cv2.destroyAllWindows()
-
     
     def start(self, frame_queue: Queue):
         self.frame_queue = frame_queue

@@ -27,10 +27,12 @@ try:
     frame_count = 0
     start_time = time.time()
 
+    total_latency = 0.0  # total iteration time accumulator
+
     while True:
         iter_start = time.time()  # Start time for this iteration
 
-        # Wait for frames from the RealSense pipeline (blocking call)
+        # Wait for frames
         frames = pipeline.wait_for_frames()
         aligned_frames = align.process(frames)
         depth_frame = aligned_frames.get_depth_frame()
@@ -78,7 +80,10 @@ try:
 
         iter_end = time.time()  # End time for this iteration
         iteration_duration = iter_end - iter_start
-        print(f"Time for current frame iteration: {iteration_duration*1000:.2f} ms")
+        total_latency += iteration_duration
+
+        avg_latency_ms = (total_latency / frame_count) * 1000
+        print(f"[Frame {frame_count}] Current: {iteration_duration*1000:.2f} ms | Avg: {avg_latency_ms:.2f} ms")
 
         if cv2.waitKey(1) == 27:
             break

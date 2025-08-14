@@ -36,8 +36,12 @@ class ObjectDetection:
     #                 self.running = False
     #                 break
     #     cv2.destroyAllWindows()
-    
+
     def _detection_loop(self):
+        iteration_count = 0
+        total_wall_time = 0.0
+        total_cpu_time = 0.0
+
         while self.running:
             try:
                 start_wall = time.perf_counter()  # wall-clock start
@@ -70,9 +74,20 @@ class ObjectDetection:
             wall_latency_ms = (end_wall - start_wall) * 1000
             cpu_time_ms = (end_cpu - start_cpu) * 1000
 
-            print(f"[Latency] Wall: {wall_latency_ms:.2f} ms | CPU: {cpu_time_ms:.2f} ms")
+            # Update totals for averages
+            iteration_count += 1
+            total_wall_time += wall_latency_ms
+            total_cpu_time += cpu_time_ms
+
+            avg_wall_ms = total_wall_time / iteration_count
+            avg_cpu_ms = total_cpu_time / iteration_count
+
+            print(f"[Frame {iteration_count}] "
+                f"Wall: {wall_latency_ms:.2f} ms | CPU: {cpu_time_ms:.2f} ms | "
+                f"Avg Wall: {avg_wall_ms:.2f} ms | Avg CPU: {avg_cpu_ms:.2f} ms")
 
         cv2.destroyAllWindows()
+
     
     def start(self, frame_queue: Queue):
         self.frame_queue = frame_queue

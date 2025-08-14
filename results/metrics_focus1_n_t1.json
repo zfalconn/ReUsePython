@@ -5,6 +5,6 @@
     "metrics/mAP50-95(B)": 0.836908207645568,
     "fitness": 0.8524623027360221,
     "preprocess": 0.9,
-    "inference": 20.1,
-    "postprocess": 2.8
+    "inference": 81.3,
+    "postprocess": 0.9
 }

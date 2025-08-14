@@ -21,7 +21,7 @@ align_to = rs.stream.color
 align = rs.align(align_to)
 
 # === Load YOLOv8 model ===
-model = YOLO(r"..\models\focus1\Focus1_YOLO11n_x1024_14112024.pt")
+model = YOLO(r"..\models\original\Focus1_YOLO11n_x1024_14112024.pt")
 
 try:
     frame_count = 0

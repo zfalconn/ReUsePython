@@ -3,13 +3,14 @@ import numpy as np
 import cv2
 from ultralytics import YOLO
 import time
+import config
 
 # === Initialize RealSense Pipeline ===
 pipeline = rs.pipeline()
-config = rs.config()
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-profile = pipeline.start(config)
+config_rs = rs.config()
+config_rs.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+config_rs.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+profile = pipeline.start(config_rs)
 
 depth_sensor = profile.get_device().first_depth_sensor()
 depth_scale = depth_sensor.get_depth_scale()
@@ -19,7 +20,7 @@ align_to = rs.stream.color
 align = rs.align(align_to)
 
 # === Load YOLOv8 model ===
-model = YOLO(r"..\models\original\Focus1_YOLO11n_x1024_14112024.pt")
+model = YOLO(config.MODEL_PATH)
 
 try:
     frame_count = 0

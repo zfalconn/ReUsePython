@@ -106,6 +106,8 @@ metrics_ncnn = {
     "FPS": FPS_ncnn
 }
 
+model_formats = ['pt', 'ncnn']
+
 # Calculate percentage increase
 fps_increase_pct = [
     ((ncnn - pt) / pt) * 100

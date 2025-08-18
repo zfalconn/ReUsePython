@@ -12,13 +12,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from src.vision.realsense_stream import RealSenseStream
 from src.vision.detection_fn import detection_xyz, draw_detections
 from src.vision.object_detection import ObjectDetection
+import config
 
 def main():
     try:
         camera = RealSenseStream(fps=30, max_queue_size=5)
         camera.start()
         
-        model = YOLO(r"models\original\Focus1_YOLO11n_x1024_14112024.pt")
+        model = YOLO(config.MODEL_PATH)
         object_detector = ObjectDetection(model, display=True, max_queue_size=1, conf=0.7, device="cpu", max_det=5)
         
         object_detector.start(camera.get_frame_queue())

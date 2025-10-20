@@ -19,7 +19,7 @@ def display_loop(camera, model, running_flag):
         frames = camera.get_latest_frame() #Grab frame from Queue produced by camera.start()
         if frames is not None:
             color_frame, depth_frame = frames
-            detections = detection_xyz(model, color_frame, depth_frame, confidence=0.5)
+            detections = detection_xyz(model, color_frame, depth_frame, conf=0.5)
             color_frame = draw_detections(color_frame, detections)
             cv2.imshow("Color", color_frame)
 
@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     ### INIT CAMERA AND DETECTION MODEL ###
     camera = RealSenseStream(fps=30)
-    model = YOLO(r"..\models\focus1\Focus1_YOLO11n_x1024_14112024_ncnn_model")
+    model = YOLO(r"models\focus1\Focus1_YOLO11s_x1024_14112024.pt")
     ### ----- ----- ----- ###
 
     ### START ACQUISTION THREAD ###

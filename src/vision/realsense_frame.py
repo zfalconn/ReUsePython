@@ -2,7 +2,7 @@ import pyrealsense2 as rs
 import cv2
 import numpy as np
 
-def realsense_init(width = 640, height = 480, fps = 15, enable_imu = False) -> rs.pipeline:
+def realsense_init(width = 1280, height = 720, fps = 15, enable_imu = False) -> rs.pipeline:
     """
     Initialize RealSense pipeline with params
 

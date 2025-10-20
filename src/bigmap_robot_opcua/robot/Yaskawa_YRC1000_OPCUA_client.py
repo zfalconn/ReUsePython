@@ -51,7 +51,7 @@ class Yaskawa_YRC1000:
 
 
 def main():
-    robot_url = "opc.tcp://192.168.1.20:16448"
+    robot_url = "opc.tcp://192.168.0.20:16448"
 
     robot = Yaskawa_YRC1000(robot_url)
     print("robot initialized")

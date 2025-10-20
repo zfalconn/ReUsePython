@@ -17,7 +17,7 @@ square_size = 0.020              # meters (25 mm squares) - change if needed
 K = np.array([[911.6036987304688, 0.0, 640.2818603515625],
               [0.0, 911.7769775390625, 387.0967102050781],
               [0.0, 0.0, 1.0]])
-dist_coeffs = np.array([[ 0.03760835, 0.24577186, -0.005007, -0.00701297, -1.04483411]])  # replace if you have distortion coeffs
+dist_coeffs = np.array([[ 0.09014592, -0.23150788, 0.0007583, -0.00150855, 0.0947352]])  # replace if you have distortion coeffs
 
 # ---------------------------
 # DH PARAMETERS (from user)
@@ -32,9 +32,10 @@ dh_table = [
     (0.0,     0.0,   0.0,   90.0),   # joint 3
     (0.0, -500.0,   0.0,  -90.0),    # joint 4
     (0.0,  -162.0,  0.0,   90.0),    # joint 5
-    (0.0,  -170.0,  0.0,    0.0),    # joint 6
+    (0.0, -430.0,   0.0,   180.0)     # TOOL
 ]
 
+#Flange: (0.0,  -170.0,  0.0,    0.0),    # joint 6
 # Convert DH numeric units
 dh_params = []
 for theta_off_deg, d_mm, a_mm, alpha_deg in dh_table:
@@ -119,7 +120,19 @@ for idx, row in df.iterrows():
 
         found, corners = cv2.findChessboardCorners(gray, pattern_size,
                                                    cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE)
-        if not found:
+        # if not found:
+        #     print(f"Checkerboard not found in image {image_files[idx]} (pose {pose_idx}).")
+        #     continue
+        
+        if found:
+            # Draw the corners on the image
+            vis = cv2.drawChessboardCorners(img.copy(), pattern_size, corners, found)
+
+            # Display the image in a resizable window
+            cv2.imshow(f"Pose {pose_idx}", vis)
+            cv2.waitKey(500)   # show for 0.5 seconds; press any key to advance if you prefer 0
+            cv2.destroyAllWindows()
+        else:
             print(f"Checkerboard not found in image {image_files[idx]} (pose {pose_idx}).")
             continue
 

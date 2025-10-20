@@ -4,10 +4,11 @@ import cv2
 import os
 
 # ---- Settings ----
-output_folder = "data/calib_images"
+output_folder = "data/yolo_retrain_251017"
 os.makedirs(output_folder, exist_ok=True)
 
 pose_counter = 1
+padding = 5  # number of digits for zero padding, e.g., 3 -> 001, 002
 
 # ---- Configure RealSense pipeline ----
 pipeline = rs.pipeline()
@@ -19,8 +20,8 @@ config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
 # Start streaming
 pipeline.start(config)
 
-print("Press SPACE to save an image with current pose number.")
-print("Press ESC to quit.")
+print("✅ Press SPACE to save an image with current pose number.")
+print("❌ Press ESC to quit.")
 
 try:
     while True:
@@ -33,19 +34,20 @@ try:
         # Convert to numpy array
         color_image = np.asanyarray(color_frame.get_data())
 
-        # Show live stream
+        # Display the live feed
         cv2.imshow("D435i Capture", color_image)
         key = cv2.waitKey(1) & 0xFF
 
-        # Save image when SPACE pressed
-        if key == 32:  # SPACE
-            filename = os.path.join(output_folder, f"pose{pose_counter:02d}.png")
+        # Save image on SPACE press
+        if key == 32:  # SPACE key
+            filename = os.path.join(output_folder, f"morrow{pose_counter:0{padding}d}.png")
             cv2.imwrite(filename, color_image)
-            print(f"Saved {filename}")
+            print(f"💾 Saved {filename}")
             pose_counter += 1
 
         # Quit on ESC
-        if key == 27:  # ESC
+        elif key == 27:  # ESC key
+            print("👋 Exiting...")
             break
 
 finally:

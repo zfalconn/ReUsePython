@@ -1,11 +1,13 @@
-import pyrealsense2 as rs
-import numpy as np
 import cv2
+import numpy as np
+import glob
 import json
+import os
 
 # -------- Parameters --------
-checkerboard_size = (7, 5)   # inner corners (columns, rows)
-square_size = 0.020         # size of each square in meters
+checkerboard_size = (7, 5)   # inner corners (cols, rows)
+square_size = 0.020          # meters
+images_folder = "data/calib_images"  # folder with your saved images
 
 # Prepare object points
 objp = np.zeros((checkerboard_size[0]*checkerboard_size[1], 3), np.float32)
@@ -15,52 +17,31 @@ objp *= square_size
 objpoints = []  # 3D points
 imgpoints = []  # 2D points
 
-# -------- Start RealSense pipeline --------
-pipeline = rs.pipeline()
-config = rs.config()
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-pipeline.start(config)
+# -------- Load images --------
+image_files = sorted(glob.glob(os.path.join(images_folder, "*.png")))  # adjust extension if needed
 
-print("Instructions:")
-print(" - Press SPACE to capture current frame for calibration")
-print(" - Move the robot to a new pose between captures")
-print(" - Press ESC to finish capturing and calibrate")
+for idx, fname in enumerate(image_files):
+    img = cv2.imread(fname)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-try:
-    while True:
-        frames = pipeline.wait_for_frames()
-        color_frame = frames.get_color_frame()
-        if not color_frame:
-            continue
+    # Find checkerboard
+    ret, corners = cv2.findChessboardCorners(gray, checkerboard_size, None)
+    if ret:
+        corners2 = cv2.cornerSubPix(
+            gray, corners, (11,11), (-1,-1),
+            (cv2.TermCriteria_EPS + cv2.TermCriteria_MAX_ITER, 30, 0.001)
+        )
+        objpoints.append(objp)
+        imgpoints.append(corners2)
 
-        img = np.asanyarray(color_frame.get_data())
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Optional: visualize detection
+        cv2.drawChessboardCorners(img, checkerboard_size, corners2, ret)
+        cv2.imshow("Checkerboard Detection", img)
+        cv2.waitKey(100)  # show each detection briefly
+    else:
+        print(f"Checkerboard not detected in {fname}")
 
-        # Find checkerboard
-        ret, corners = cv2.findChessboardCorners(gray, checkerboard_size, None)
-        if ret:
-            corners2 = cv2.cornerSubPix(
-                gray, corners, (11,11), (-1,-1),
-                (cv2.TermCriteria_EPS + cv2.TermCriteria_MAX_ITER, 30, 0.001)
-            )
-            cv2.drawChessboardCorners(img, checkerboard_size, corners2, ret)
-
-        cv2.imshow("Calibration Capture", img)
-        key = cv2.waitKey(1)
-
-        if key & 0xFF == 27:  # ESC key
-            break
-        elif key & 0xFF == 32:  # SPACE key
-            if ret:
-                objpoints.append(objp)
-                imgpoints.append(corners2)
-                print(f"Captured {len(objpoints)} frames")
-            else:
-                print("Checkerboard not detected, try again")
-
-finally:
-    pipeline.stop()
-    cv2.destroyAllWindows()
+cv2.destroyAllWindows()
 
 # -------- Calibrate Camera --------
 if len(objpoints) > 0:
@@ -84,4 +65,4 @@ if len(objpoints) > 0:
 
     print("Calibration saved to d435i_calibration.json")
 else:
-    print("No valid frames captured, calibration aborted.")
+    print("No valid checkerboards detected, calibration aborted.")

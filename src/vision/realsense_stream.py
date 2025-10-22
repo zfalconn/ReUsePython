@@ -35,6 +35,9 @@ class RealSenseStream:
         while not self.frame_queue.empty():
             latest = self.frame_queue.get()
         return latest
+    
+    def get_depth_scale(self):
+        return self.depth_scale
 
     def get_frame_queue(self):
         return self.frame_queue

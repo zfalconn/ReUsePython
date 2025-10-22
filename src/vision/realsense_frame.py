@@ -52,16 +52,21 @@ def realsense_get_frame(pipeline):
     """
 
     #Grab frame
-    frames = pipeline.wait_for_frames()
+    align_to = rs.stream.color
+    align = rs.align(align_to)
 
-    #Get color and depth frames from frame
-    color_frame = frames.get_color_frame()
-    depth_frame = frames.get_depth_frame()
+    frames = pipeline.wait_for_frames()
+    aligned_frames = align.process(frames)
+    depth_frame = aligned_frames.get_depth_frame()
+    color_frame = aligned_frames.get_color_frame()
+    # #Get color and depth frames from frame
+    # color_frame = frames.get_color_frame()
+    # depth_frame = frames.get_depth_frame()
 
     if not color_frame or not depth_frame:
         return None, None
 
-    color_frame = np.asanyarray(color_frame.get_data())
+    #color_frame = np.asanyarray(color_frame.get_data())
     #depth_frame = np.asanyarray(depth_frame.get_data())
 
 

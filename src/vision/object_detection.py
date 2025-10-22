@@ -5,6 +5,7 @@ from .detection_fn import detection_xyz, draw_detections
 from ultralytics import YOLO
 import cv2
 import time
+import numpy as np
 
 class ObjectDetection:
     def __init__(self, model : YOLO, display : bool = False, max_queue_size = 1, **yolo_args):
@@ -32,15 +33,18 @@ class ObjectDetection:
 
             if color_frame is None or depth_frame is None:
                 continue
-
+            
+            color_image = np.asanyarray(color_frame.get_data())
+            #depth_frame = np.asanyarray(depth_frame.get_data())
+            
             # Detection
-            detections = detection_xyz(self.model, color_frame, depth_frame, **self.yolo_args)
+            detections = detection_xyz(self.model, color_image, depth_frame, **self.yolo_args)
             if not self.detections_queue.full():
                 self.detections_queue.put(detections)
 
             # Display
             if self.display:
-                annotated_frame = draw_detections(color_frame.copy(), detections)
+                annotated_frame = draw_detections(color_image.copy(), detections)
                 cv2.imshow("Bounding Box with XYZ", annotated_frame)
                 if cv2.waitKey(1) == 27:  # ESC key to stop
                     self.running = False

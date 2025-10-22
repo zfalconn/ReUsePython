@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 from ultralytics import YOLO
 import time
-import config
+
 
 # === Initialize RealSense Pipeline ===
 pipeline = rs.pipeline()
@@ -20,7 +20,7 @@ align_to = rs.stream.color
 align = rs.align(align_to)
 
 # === Load YOLOv8 model ===
-model = YOLO(config.MODEL_PATH)
+model = YOLO(r"models\focus1\retrain\train3\weights\best_morrow_251020.pt")
 
 try:
     frame_count = 0
@@ -44,7 +44,7 @@ try:
         color_image = np.asanyarray(color_frame.get_data())
 
         # Inference
-        results = model(color_image, conf=0.7, device='cpu')[0]
+        results = model(color_image, conf=0.8, device='cpu')[0]
 
         # Compute overall FPS
         frame_count += 1

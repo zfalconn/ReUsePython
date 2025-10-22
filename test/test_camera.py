@@ -4,6 +4,7 @@ import os
 import cv2
 import threading
 from ultralytics import YOLO
+import numpy as np
 
 # Add the project root to the sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -14,18 +15,58 @@ import cv2
 
 from src.vision.object_detection import ObjectDetection
 
-def display_loop(camera, model, running_flag):
+def colorize_depth(depth_image, depth_scale, min_depth=0.2, max_depth=2.0):
+    """
+    Convert uint16 depth image (in camera units) to a colored 8-bit visualization.
+    depth_scale: from pipeline.get_device().first_depth_sensor().get_depth_scale()
+    """
+    # Convert to meters
+    depth_m = depth_image * depth_scale
+
+    # Clip to range
+    depth_clipped = np.clip(depth_m, min_depth, max_depth)
+
+    # Normalize to 0–255
+    depth_normalized = (depth_clipped - min_depth) / (max_depth - min_depth)
+    depth_normalized = (depth_normalized * 255).astype(np.uint8)
+
+    # Apply colormap
+    depth_colored = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
+    return depth_colored
+
+
+def display_loop(camera : RealSenseStream, model, running_flag):
     while running_flag["run"]:
-        frames = camera.get_latest_frame() #Grab frame from Queue produced by camera.start()
+        frames = camera.get_latest_frame()  # Grab frame from Queue produced by camera.start()
         if frames is not None:
             color_frame, depth_frame = frames
-            detections = detection_xyz(model, color_frame, depth_frame, conf=0.5)
-            color_frame = draw_detections(color_frame, detections)
-            cv2.imshow("Color", color_frame)
 
-        if cv2.waitKey(1) == 27:
+            color_image = np.asanyarray(color_frame.get_data())
+            depth_image = np.asanyarray(depth_frame.get_data())
+
+            # Run detections
+            detections = detection_xyz(model, color_image, depth_frame, conf=0.75)
+            color_image = draw_detections(color_image, detections)
+
+            # Display color frame
+            cv2.imshow("Color", color_image)
+
+            # --- Display depth frame ---
+            # Normalize depth to 0-255 and apply a colormap for visualization
+            # depth_normalized = cv2.normalize(depth_frame_np, None, 0, 255, cv2.NORM_MINMAX)
+            # depth_normalized = np.uint8(depth_normalized)
+            # depth_colored = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
+
+            depth_scale = camera.get_depth_scale() # store this when initializing your camera
+            depth_colored = colorize_depth(depth_image, depth_scale)
+
+            cv2.imshow("Depth", depth_colored)
+            # ---------------------------
+
+        if cv2.waitKey(1) == 27:  # ESC to stop
             running_flag["run"] = False
             break
+
     cv2.destroyAllWindows()
 
 
@@ -37,8 +78,8 @@ if __name__ == "__main__":
     # which can be moved to a separate file or some kind of config
 
     ### INIT CAMERA AND DETECTION MODEL ###
-    camera = RealSenseStream(fps=30)
-    model = YOLO(r"models\focus1\Focus1_YOLO11s_x1024_14112024.pt")
+    camera = RealSenseStream(fps=30, width=1280, height=720)
+    model = YOLO(r"models\focus1\retrain\train3\weights\best_morrow_251020.pt")
     ### ----- ----- ----- ###
 
     ### START ACQUISTION THREAD ###

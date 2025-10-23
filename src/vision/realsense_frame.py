@@ -13,6 +13,8 @@ def realsense_init(width = 1280, height = 720, fps = 15, enable_imu = False) -> 
         enable_imu (bool): Enable accel and gyro streams
     Returns:
         pipeline: Started RealSense pipeline
+        depth_scale:
+        depth_intrinsics: 
     """
 
     pipeline = rs.pipeline()
@@ -33,8 +35,9 @@ def realsense_init(width = 1280, height = 720, fps = 15, enable_imu = False) -> 
 
     depth_sensor = profile.get_device().first_depth_sensor()
     depth_scale = depth_sensor.get_depth_scale()
+    depth_intrinsics = profile.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
 
-    return pipeline, depth_scale
+    return pipeline, depth_scale, depth_intrinsics
 
 
 
@@ -59,15 +62,9 @@ def realsense_get_frame(pipeline):
     aligned_frames = align.process(frames)
     depth_frame = aligned_frames.get_depth_frame()
     color_frame = aligned_frames.get_color_frame()
-    # #Get color and depth frames from frame
-    # color_frame = frames.get_color_frame()
-    # depth_frame = frames.get_depth_frame()
 
     if not color_frame or not depth_frame:
         return None, None
 
-    #color_frame = np.asanyarray(color_frame.get_data())
-    #depth_frame = np.asanyarray(depth_frame.get_data())
-
-
+    
     return color_frame, depth_frame

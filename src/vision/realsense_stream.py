@@ -4,16 +4,20 @@ from .realsense_frame import realsense_get_frame, realsense_init
 
 class RealSenseStream:
     """
-    RealSenseStream class to start threaded acquistion
+    RealSenseStream class to initialize camera and start threaded acquistion
     """
     def __init__(self, width = 640, height = 480, fps = 15, enable_imu = False, max_queue_size=1):
-        self.pipeline, self.depth_scale = realsense_init(width, height, fps, enable_imu)
-        self.frame_queue = Queue(maxsize=max_queue_size)
+        self.pipeline, self._depth_scale, self._depth_intrinsics = realsense_init(width, height, fps, enable_imu)
+        self._frame_queue = Queue(maxsize=max_queue_size)
+        self._width = width
+        self._height = height
         self.running = False
 
     def _capture_loop(self):
         while self.running:
             color_frame, depth_frame = realsense_get_frame(self.pipeline)
+
+
 
             if color_frame is not None and depth_frame is not None:
                 if not self.frame_queue.full():
@@ -36,9 +40,22 @@ class RealSenseStream:
             latest = self.frame_queue.get()
         return latest
     
-    def get_depth_scale(self):
-        return self.depth_scale
+    @property
+    def depth_scale(self):
+        return self._depth_scale
 
-    def get_frame_queue(self):
-        return self.frame_queue
+    @property
+    def depth_intrinsics(self):
+        return self._depth_intrinsics
 
+    @property
+    def width(self):
+        return self._width
+
+    @property
+    def height(self):
+        return self._height
+
+    @property
+    def frame_queue(self):
+        return self._frame_queue

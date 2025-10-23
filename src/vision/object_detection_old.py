@@ -1,7 +1,7 @@
 import threading
 from collections import deque
 from queue import Queue, Empty
-from .detection_fn import detection_xyz, draw_detections
+from .detection_fn import detection_xyz, draw_detection
 from ultralytics import YOLO
 import cv2
 import time
@@ -44,7 +44,7 @@ class ObjectDetection:
 
             # Display
             if self.display:
-                annotated_frame = draw_detections(color_image.copy(), detections)
+                annotated_frame = draw_detection(color_image.copy(), detections)
                 cv2.imshow("Bounding Box with XYZ", annotated_frame)
                 if cv2.waitKey(1) == 27:  # ESC key to stop
                     self.running = False

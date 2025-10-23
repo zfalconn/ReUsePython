@@ -2,6 +2,7 @@ from ultralytics import YOLO
 import cv2
 import pyrealsense2 as rs
 import numpy as np
+from collections import Counter
 # import sys
 # import os
 
@@ -15,11 +16,6 @@ def detection_xyz(model: YOLO, color_frame, depth_frame, intrinsics, img_width, 
 
     results = model(color_image, **yolo_args)[0]
     detections = []
-    
-    # intrinsics = depth_frame.profile.as_video_stream_profile().get_intrinsics()
-
-    # width = depth_frame.get_width()
-    # height = depth_frame.get_height()
 
     for box in results.boxes:
         cls = int(box.cls[0])
@@ -42,13 +38,34 @@ def detection_xyz(model: YOLO, color_frame, depth_frame, intrinsics, img_width, 
         print("POINT 3D: ", point_3d)
         detections.append({
             "class_id": cls,
+            "class_name": model.names[cls],
             "confidence": conf,
             "bbox": [x1, y1, x2, y2],
             "center_2d": [cx, cy],
-            "xyz": point_3d  # optional: convert to list
+            "xyz": point_3d 
         })
 
     return detections
+
+def postprocess_detection(detections, depth_frame, intrinsics):
+    class_counts = Counter(det["class_name"] for det in detections)
+    terminal_detections = [det for det in detections if det["class_name"] == "terminal"]
+    if class_counts["terminal"] == 2:
+        mid_x = int((terminal_detections[0]["center_2d"][0] + terminal_detections[1]["center_2d"][0])/2)
+        mid_y = int((terminal_detections[0]["center_2d"][1] + terminal_detections[1]["center_2d"][1])/2)
+    depth = depth_frame.get_distance(mid_x, mid_y)
+
+    # 3D point
+    point_3d = rs.rs2_deproject_pixel_to_point(intrinsics, [mid_x, mid_y], depth)
+        # Check if there is only 1 bbox for class 0 (battery_housing)
+        # Check closest to class 0 (optional)
+        # Check if there is only 2 bbox for class 1
+        # Take coordinate of these two bounding box and calculate center of connecting line
+        # generate 3D coordinate on this point
+        # transform from camera frame to gripper frame
+    pass
+
+
 
 
 def colorize_depth(depth_frame, depth_scale, min_depth=0.2, max_depth=2.0):
@@ -65,13 +82,14 @@ def draw_detection(color_image, detections):
     for det in detections:
         x1, y1, x2, y2 = det["bbox"]
         cls_id = str(det["class_id"])
+        cls_name = det["class_name"]
         conf = det["confidence"]
         xyz = det["xyz"]
 
-        label = f"ID:{cls_id} {conf:.2f}"
+        label = f"ID:{cls_id} {conf:.2f} | {cls_name}"
         cv2.rectangle(color_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.putText(color_image, label, (x1, y1 - 10), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
 
         # Optional: show XYZ below the box
         cv2.putText(color_image, f"X:{xyz[0]:.2f} Y:{xyz[1]:.2f} Z:{xyz[2]:.2f}", 

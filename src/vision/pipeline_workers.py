@@ -13,19 +13,19 @@ from src.vision.realsense_stream import RealSenseStream
 # -------------------------
 
 class DetectionWorker(threading.Thread):
-    def __init__(self, model, camera : RealSenseStream, max_queue_size=1, display=False, **yolo_args):
+    def __init__(self, model, camera : RealSenseStream, max_queue_size=1, display=False, running_flag = False, **yolo_args):
         super().__init__(daemon=True)
         self.model = model
         self.camera = camera  # 👈 full camera reference
         self.frame_queue = camera.frame_queue
         self.detections_queue = Queue(maxsize=max_queue_size)
         self.display = display
-        self.running = True
+        self.running_flag = running_flag
         self.yolo_args = yolo_args
 
     def start(self):
         print("[DetectionWorker] started.")
-        while self.running:
+        while self.running_flag["run"]:
             try:
                 color_frame, depth_frame = self.frame_queue.get(timeout=1)
             except Empty:
@@ -79,21 +79,18 @@ class DetectionWorker(threading.Thread):
 # Processing Worker
 # -------------------------
 class ProcessingWorker(threading.Thread):
-    def __init__(self, det_queue, processed_queue, running_flag):
+    def __init__(self, det_queue, processed_queue, max_queue_size=1, running_flag = False):
         super().__init__(daemon=True)
         self.det_queue = det_queue
-        self.processed_queue = processed_queue
+        self.processed_queue = Queue(maxsize=max_queue_size)
         self.running_flag = running_flag
 
     def process_detections(self, detections):
-        # Example: Compute centroid or filter detections
         processed = []
-        for det in detections:
-            x, y, z = det["x"], det["y"], det["z"]
-            processed.append((x, y, z))
+        # Check closest to 
         return processed
 
-    def run(self):
+    def start(self):
         print("[Processing] Thread started.")
         while self.running_flag["run"]:
             try:
@@ -105,4 +102,7 @@ class ProcessingWorker(threading.Thread):
             self.processed_queue.put(processed_coords)
 
         print("[Processing] Thread exiting.")
+    
+    def stop(self):
+        self.running = False
 

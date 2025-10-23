@@ -10,10 +10,10 @@ import numpy as np
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.vision.realsense_stream import RealSenseStream
-from src.vision.detection_fn import detection_xyz, draw_detections
+from src.vision.detection_fn import detection_xyz, draw_detection
 import cv2
 
-from src.vision.object_detection import ObjectDetection
+from src.vision.object_detection_old import ObjectDetection
 
 def colorize_depth(depth_image, depth_scale, min_depth=0.2, max_depth=2.0):
     """
@@ -46,7 +46,7 @@ def display_loop(camera : RealSenseStream, model, running_flag):
 
             # Run detections
             detections = detection_xyz(model, color_image, depth_frame, conf=0.75)
-            color_image = draw_detections(color_image, detections)
+            color_image = draw_detection(color_image, detections)
 
             # Display color frame
             cv2.imshow("Color", color_image)

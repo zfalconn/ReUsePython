@@ -52,10 +52,6 @@ def display_loop(camera : RealSenseStream, model, running_flag):
             cv2.imshow("Color", color_image)
 
             # --- Display depth frame ---
-            # Normalize depth to 0-255 and apply a colormap for visualization
-            # depth_normalized = cv2.normalize(depth_frame_np, None, 0, 255, cv2.NORM_MINMAX)
-            # depth_normalized = np.uint8(depth_normalized)
-            # depth_colored = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
 
             depth_scale = camera.get_depth_scale() # store this when initializing your camera
             depth_colored = colorize_depth(depth_image, depth_scale)

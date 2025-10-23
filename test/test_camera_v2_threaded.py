@@ -14,22 +14,42 @@ def colorize_depth(depth_image, depth_scale, min_depth=0.2, max_depth=2.0):
     return cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
 
 
-def detection_worker(frame_queue, output_queue, model, camera, running_flag):
-    """Thread: YOLO inference."""
+def detection_worker(frame_queue, image_queue, det_queue, model, camera, running_flag):
+    """Thread: YOLO inference — outputs images and detections separately."""
     while running_flag["run"]:
         try:
             color_frame, depth_frame = frame_queue.get(timeout=1)
         except queue.Empty:
             continue
 
+        # Convert frames to numpy arrays
         color_image = np.asanyarray(color_frame.get_data())
         depth_image = np.asanyarray(depth_frame.get_data())
 
+        # Run detection (returns list of dicts or objects with xyz)
         detections = detection_xyz(model, color_image, depth_frame, conf=0.75)
-        color_annotated = draw_detections(color_image, detections)
 
+        # Annotate for display
+        color_annotated = draw_detections(color_image, detections)
         depth_colored = colorize_depth(depth_image, camera.get_depth_scale())
-        output_queue.put((color_annotated, depth_colored))
+
+        # Put images in image queue
+        image_queue.put((color_annotated, depth_colored))
+
+        ### IMPLEMENT PUT DETECTIONS IN QUEUE HERE ### 
+        # Extract coordinates and put them separately
+        # coords = []
+        # for det in detections:
+        #     # Assuming detection_xyz returns dicts like {'class': ..., 'xyz': (x,y,z), 'conf': ...}
+        #     # if 'xyz' in det:
+        #     #     coords.append(det['xyz'])
+
+        #     # IMPLEMENT
+
+        #     continue
+
+        # if coords:
+        #     coord_queue.put(coords)
 
     print("Detection thread exiting.")
 
@@ -70,7 +90,8 @@ if __name__ == "__main__":
     model = YOLO(r"models\focus1\retrain\train3\weights\best_morrow_251020.pt")
 
     frame_queue = queue.Queue(maxsize=2)   # Small buffer to avoid lag
-    output_queue = queue.Queue(maxsize=2)
+    image_queue = queue.Queue(maxsize=2)
+    coord_queue = queue.Queue(maxsize=2)
     running_flag = {"run": True}
 
     # Start camera acquisition
@@ -88,8 +109,8 @@ if __name__ == "__main__":
 
     # Threads
     t_reader = threading.Thread(target=frame_reader, daemon=True)
-    t_detector = threading.Thread(target=detection_worker, args=(frame_queue, output_queue, model, camera, running_flag), daemon=True)
-    t_display = threading.Thread(target=display_worker, args=(output_queue, running_flag), daemon=True)
+    t_detector = threading.Thread(target=detection_worker, args=(frame_queue, image_queue, coord_queue,  model, camera, running_flag), daemon=True)
+    t_display = threading.Thread(target=display_worker, args=(image_queue, running_flag), daemon=True)
 
     # Start
     t_reader.start()

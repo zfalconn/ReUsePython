@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from src.vision.realsense_stream import RealSenseStream
 from src.vision.detection_fn import detection_xyz, draw_detections
-from src.vision.object_detection import ObjectDetection
+from src.vision.object_detection_old import ObjectDetection
 import config
 
 def main():

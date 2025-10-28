@@ -16,34 +16,38 @@ def detection_xyz(model: YOLO, color_frame, depth_frame, intrinsics, img_width, 
 
     results = model(color_image, **yolo_args)[0]
     detections = []
+    if results.boxes:
+        for box in results.boxes:
+            cls = int(box.cls[0])
+            conf = float(box.conf[0])
 
-    for box in results.boxes:
-        cls = int(box.cls[0])
-        conf = float(box.conf[0])
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            
+            cx = int((x1 + x2) / 2)
+            cy = int((y1 + y2) / 2)
+            cx = max(0, min(cx, img_width - 1))
+            cy = max(0, min(cy, img_height - 1))
 
-        x1, y1, x2, y2 = map(int, box.xyxy[0])
-        
-        cx = int((x1 + x2) / 2)
-        cy = int((y1 + y2) / 2)
-        cx = max(0, min(cx, img_width - 1))
-        cy = max(0, min(cy, img_height - 1))
+            # Depth
+            depth = depth_frame.get_distance(cx, cy)
+            if depth <= 0:
+                continue
 
-        # Depth
-        depth = depth_frame.get_distance(cx, cy)
-        if depth <= 0:
-            continue
+            # 3D point
+            point_3d = rs.rs2_deproject_pixel_to_point(intrinsics, [cx, cy], depth)
+            print(f"POINT 3D:  {point_3d} --- {cls}")
 
-        # 3D point
-        point_3d = rs.rs2_deproject_pixel_to_point(intrinsics, [cx, cy], depth)
-        print("POINT 3D: ", point_3d)
-        detections.append({
-            "class_id": cls,
-            "class_name": model.names[cls],
-            "confidence": conf,
-            "bbox": [x1, y1, x2, y2],
-            "center_2d": [cx, cy],
-            "xyz": point_3d 
-        })
+            point_3d_gripper = tf_camera_to_gripper(point_3d)
+            print(f"POINT 3D in gripper's frame: {point_3d_gripper} --- {cls}")
+            detections.append({
+                "class_id": cls,
+                "class_name": model.names[cls],
+                "confidence": conf,
+                "bbox": [x1, y1, x2, y2],
+                "center_2d": [cx, cy],
+                "xyz": point_3d ,
+                "xyz_gripper_frame": point_3d_gripper
+            })
 
     return detections
 
@@ -85,6 +89,7 @@ def draw_detection(color_image, detections):
         cls_name = det["class_name"]
         conf = det["confidence"]
         xyz = det["xyz"]
+        xyz_gripper = det["xyz_gripper_frame"]
 
         label = f"ID:{cls_id} {conf:.2f} | {cls_name}"
         cv2.rectangle(color_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
@@ -94,8 +99,37 @@ def draw_detection(color_image, detections):
         # Optional: show XYZ below the box
         cv2.putText(color_image, f"X:{xyz[0]:.2f} Y:{xyz[1]:.2f} Z:{xyz[2]:.2f}", 
                     (x1, y2 + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
+        
+        cv2.putText(color_image, f"X_f:{xyz_gripper[0]:.2f} Y_f:{xyz_gripper[1]:.2f} Z_f:{xyz_gripper[2]:.2f}", 
+                    (x1, y2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
     
     return color_image
+
+def tf_camera_to_gripper(point_cam, 
+                        R_gc = np.array([
+                            [0, -1, 0],
+                            [0,  0, 1],
+                            [-1, 0, 0]
+                        ]), 
+                        t_gc = np.array([0.085, -0.220, 0.040])):
+    """
+    Transform a 3D point from the camera frame to the gripper frame.
+
+    Args:
+        point_cam (array-like): [x, y, z] in camera frame
+        R_gc (np.ndarray): 3x3 rotation matrix from camera to gripper
+        t_gc (array-like): 3x1 translation vector from camera to gripper
+
+    Returns:
+        np.ndarray: [x, y, z] in gripper frame
+    """
+    point_cam = np.array(point_cam).reshape(3, 1)
+    R_gc = np.array(R_gc).reshape(3, 3)
+    t_gc = np.array(t_gc).reshape(3, 1)
+
+    point_gripper = R_gc @ point_cam + t_gc
+    return point_gripper.flatten()
+
 
 if __name__ == "__main__":
     model = YOLO(r"..\models\focus1\Focus1_YOLO11n_x1024_14112024_ncnn_model")

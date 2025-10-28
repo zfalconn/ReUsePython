@@ -13,7 +13,7 @@ from src.vision.realsense_stream import RealSenseStream
 # -------------------------
 
 class DetectionWorker(threading.Thread):
-    def __init__(self, model, camera : RealSenseStream, max_queue_size=1, display=False, running_flag = False, **yolo_args):
+    def __init__(self, model, camera : RealSenseStream, running_flag, max_queue_size=1, display=False, **yolo_args):
         super().__init__(daemon=True)
         self.model = model
         self.camera = camera  # 👈 full camera reference
@@ -52,6 +52,8 @@ class DetectionWorker(threading.Thread):
                 **self.yolo_args
             )
 
+
+
             if not self.detections_queue.full():
                 self.detections_queue.put(detections)
 
@@ -79,16 +81,24 @@ class DetectionWorker(threading.Thread):
 # Processing Worker
 # -------------------------
 class ProcessingWorker(threading.Thread):
-    def __init__(self, det_queue, processed_queue, max_queue_size=1, running_flag = False):
+    def __init__(self, det_queue, processed_queue, running_flag, max_queue_size=1):
         super().__init__(daemon=True)
         self.det_queue = det_queue
         self.processed_queue = Queue(maxsize=max_queue_size)
         self.running_flag = running_flag
 
-    def process_detections(self, detections):
-        processed = []
-        # Check closest to 
-        return processed
+    # def process_detections(self, detections):
+    #     processed = []
+    #     # Check closest to class 0 (battery_housing)
+    #     # Check if there is only 2 bbox for class 1
+    #     # Take coordinate of these two bounding box and calculate center of connecting line
+    #     # generate 3D coordinate on this point
+    #     # transform from camera frame to gripper frame
+
+    #     for box in detections:
+
+
+    #     return processed
 
     def start(self):
         print("[Processing] Thread started.")

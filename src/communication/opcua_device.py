@@ -51,11 +51,11 @@ class PLCClient(OPCUADevice):
 
     def init_nodes(self):
         """Initialize PLC-specific nodes."""
-        self.node_x = self.get_node("ns=3;s='VisionData'.'X'")
-        self.node_y = self.get_node("ns=3;s='VisionData'.'Y'")
-        self.node_z = self.get_node("ns=3;s='VisionData'.'Z'")
-        self.node_trigger = self.get_node("ns=3;s='VisionData'.'Trigger'")
-        self.node_ack = self.get_node("ns=3;s='VisionData'.'Ack'")
+        self.node_x = self.get_node('ns=4;i=2')
+        self.node_y = self.get_node('ns=4;i=3')
+        self.node_z = self.get_node('ns=4;i=4')
+        self.node_trigger = self.get_node('ns=4;i=5')
+        # self.node_ack = self.get_node("ns=3;s='VisionData'.'Ack'")
 
     def send_coordinates(self, x, y, z):
         for node, val in zip((self.node_x, self.node_y, self.node_z), (x, y, z)):
@@ -64,9 +64,10 @@ class PLCClient(OPCUADevice):
 
     def set_trigger(self, value: bool):
         self.node_trigger.set_value(ua.Variant(value, ua.VariantType.Boolean))
+        print("SENT")
 
-    def get_ack(self) -> bool:
-        return self.node_ack.get_value()
+    # def get_ack(self) -> bool:
+    #     return self.node_ack.get_value()
 
 
 # ────────────────────────────────────────────────────────────────
@@ -77,6 +78,7 @@ class Yaskawa_YRC1000(OPCUADevice):
     def __init__(self, url, auto_start=True):
         super().__init__(url, auto_start)
         if auto_start:
+            self.start_communication()
             self.init_nodes()
 
     def init_nodes(self):
@@ -104,9 +106,11 @@ class Yaskawa_YRC1000(OPCUADevice):
         self.controller_obj.call_method("5:StartJob", job_name)
         time.sleep(0.1)
         if block:
-            while self.running_var.get_value():
-                time.sleep(0.1)
-            print(f"✅ Job finished: {job_name}")
+            running = self.running_var.get_value()
+            print("running job: ",job_name)
+            while running == True:
+                running = self.running_var.get_value()
+            print("finished job: ", job_name)
 
 
 def get_vision_coordinates():
@@ -127,34 +131,34 @@ def main():
     robot_url = "opc.tcp://192.168.0.20:16448"
     plc_url = "opc.tcp://192.168.0.1:4840"
 
-    robot = Yaskawa_YRC1000(robot_url)
+    #robot = Yaskawa_YRC1000(robot_url)
     plc = PLCClient(plc_url)
 
     try:
         print("System initialized. Waiting for PLC Ack...")
-        while not plc.get_ack():
-            time.sleep(0.1)
+        # while not plc.get_ack():
+        #     time.sleep(0.1)
         print("✅ PLC ready.")
 
-        coords = get_vision_coordinates()
-        plc.send_coordinates(*coords)
+        #coords = get_vision_coordinates()
+        #plc.send_coordinates(*coords)
 
         plc.set_trigger(True)
         time.sleep(0.2)
         plc.set_trigger(False)
 
-        robot.set_servo(True)
-        robot.start_job('TICTACTOE_X0_HOME_PLAY', block=True)
-        robot.set_servo(False)
+        # robot.set_servo(True)
+        # robot.start_job('TICTACTOE_X0_HOME_PLAY', block=True)
+        # robot.set_servo(False)
 
         # Notify PLC robot done
-        plc.set_trigger(True)
-        time.sleep(0.2)
-        plc.set_trigger(False)
+        # plc.set_trigger(True)
+        # time.sleep(0.2)
+        # plc.set_trigger(False)
 
     finally:
         plc.stop_communication()
-        robot.stop_communication()
+        #robot.stop_communication()
         print("🔚 Program ended.")
 
 

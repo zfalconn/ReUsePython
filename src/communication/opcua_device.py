@@ -15,9 +15,17 @@ class OPCUADevice:
         if auto_start:
             self.start_communication()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop_communication()
+        return False
+
     def start_communication(self):
         """Initialize ThreadLoop and connect to OPC UA server."""
         self.tloop = ThreadLoop()
+        self.tloop.daemon = True
         self.client = Client(self.url, tloop=self.tloop)
         self.tloop.start()
         self.client.connect()
@@ -78,7 +86,6 @@ class Yaskawa_YRC1000(OPCUADevice):
     def __init__(self, url, auto_start=True):
         super().__init__(url, auto_start)
         if auto_start:
-            self.start_communication()
             self.init_nodes()
 
     def init_nodes(self):

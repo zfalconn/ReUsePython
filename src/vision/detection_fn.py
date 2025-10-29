@@ -37,7 +37,8 @@ def detection_xyz(model: YOLO, color_frame, depth_frame, intrinsics, img_width, 
             point_3d = rs.rs2_deproject_pixel_to_point(intrinsics, [cx, cy], depth)
             print(f"POINT 3D:  {point_3d} --- {cls}")
 
-            point_3d_gripper = tf_camera_to_gripper(point_3d)
+            point_3d_gripper = tf_camera_to_gripper(point_3d, 
+                                                    t_gc=np.array([0.0, 0.0, 0.0]))
             print(f"POINT 3D in gripper's frame: {point_3d_gripper} --- {cls}")
             detections.append({
                 "class_id": cls,

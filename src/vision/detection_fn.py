@@ -83,7 +83,8 @@ def draw_detection(color_image, detections):
         
         cv2.putText(color_image, f"X_f:{xyz_gripper[0]:.2f} Y_f:{xyz_gripper[1]:.2f} Z_f:{xyz_gripper[2]:.2f}", 
                     (x1, y2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
-        cv2.rectangle(color_image, (640-300, 360-200), (640+300, 360+200), (0, 0, 255), 2)
+        cv2.rectangle(color_image, (640-400, 360-200), (640+400, 360+200), (0, 0, 255), 2)
+        cv2.circle(color_image,(640,360),2,(255,255,255))
     return color_image
 
 def tf_camera_to_gripper(point_cam, 

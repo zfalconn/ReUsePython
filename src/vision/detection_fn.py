@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import cv2
 import pyrealsense2 as rs
 import numpy as np
-from collections import Counter
+import logging
 # import sys
 # import os
 
@@ -35,11 +35,12 @@ def detection_xyz(model: YOLO, color_frame, depth_frame, intrinsics, img_width, 
 
             # 3D point
             point_3d = rs.rs2_deproject_pixel_to_point(intrinsics, [cx, cy], depth)
-            print(f"POINT 3D:  {point_3d} --- {cls}")
+            #logging.info(f"POINT 3D:  {point_3d} --- {cls}")
 
             point_3d_gripper = tf_camera_to_gripper(point_3d, 
                                                     t_gc=np.array([0.0, 0.0, 0.0]))
-            print(f"POINT 3D in gripper's frame: {point_3d_gripper} --- {cls}")
+            logging.info(f"POINT 3D in gripper's frame: {point_3d_gripper} --- {cls}")
+           
             detections.append({
                 "class_id": cls,
                 "class_name": model.names[cls],
@@ -51,27 +52,6 @@ def detection_xyz(model: YOLO, color_frame, depth_frame, intrinsics, img_width, 
             })
 
     return detections
-
-def postprocess_detection(detections, depth_frame, intrinsics):
-    class_counts = Counter(det["class_name"] for det in detections)
-    terminal_detections = [det for det in detections if det["class_name"] == "terminal"]
-    if class_counts["terminal"] == 2:
-        mid_x = int((terminal_detections[0]["center_2d"][0] + terminal_detections[1]["center_2d"][0])/2)
-        mid_y = int((terminal_detections[0]["center_2d"][1] + terminal_detections[1]["center_2d"][1])/2)
-    depth = depth_frame.get_distance(mid_x, mid_y)
-
-    # 3D point
-    point_3d = rs.rs2_deproject_pixel_to_point(intrinsics, [mid_x, mid_y], depth)
-        # Check if there is only 1 bbox for class 0 (battery_housing)
-        # Check closest to class 0 (optional)
-        # Check if there is only 2 bbox for class 1
-        # Take coordinate of these two bounding box and calculate center of connecting line
-        # generate 3D coordinate on this point
-        # transform from camera frame to gripper frame
-    pass
-
-
-
 
 def colorize_depth(depth_frame, depth_scale, min_depth=0.2, max_depth=2.0):
 

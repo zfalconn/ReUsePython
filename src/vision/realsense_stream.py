@@ -1,6 +1,8 @@
 import threading
-from queue import Queue
+import logging
+from queue import Queue, Full, Empty
 from .realsense_frame import realsense_get_frame, realsense_init
+from ..utils.queue_helper import put_latest
 
 class RealSenseStream:
     """
@@ -12,33 +14,41 @@ class RealSenseStream:
         self._width = width
         self._height = height
         self.running = False
+        self.cam_logger = logging.getLogger(self.__class__.__name__)
 
     def _capture_loop(self):
+        self.cam_logger.info("Capture loop started")
         while self.running:
             color_frame, depth_frame = realsense_get_frame(self.pipeline)
 
-
-
             if color_frame is not None and depth_frame is not None:
-                if not self.frame_queue.full():
-                    # Add frame to queue
-                    self.frame_queue.put((color_frame,depth_frame))
+                try:
+                    put_latest(self.frame_queue, (color_frame,depth_frame))
+                except Exception as e:
+                    logging.info(f'Exception from RealSenseStream capture loop: {e}')
+                    continue
 
     def start(self):
         self.running = True
         self.thread = threading.Thread(target=self._capture_loop, daemon=True)
         self.thread.start()
+        self.cam_logger.info("Thread started")
 
     def stop(self):
         self.running = False
         self.thread.join()
         self.pipeline.stop()
+        self.cam_logger.info("Thread stopped")
 
     def get_latest_frame(self):
         latest = None
-        while not self.frame_queue.empty():
-            latest = self.frame_queue.get()
+        while True:
+            try:
+                latest = self.frame_queue.get_nowait()
+            except Empty:
+                break
         return latest
+
     
     @property
     def depth_scale(self):

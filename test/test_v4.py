@@ -15,17 +15,17 @@ from src.communication.opcua_device import PLCClient, Yaskawa_YRC1000
 
 def main():
     # --- Control parameters ---
-    Kp = 0.4
-    Kd = 0.2
-    alpha = 0.3        # smoothing factor (0–1)
-    DEADBAND_M = 0.01  # 10 mm deadband
-    LOOP_HZ = 10
+    Kp = 0.2
+    Kd = 0.4
+    alpha = 0.32       # smoothing factor (0–1)
+    DEADBAND_M = 0.02  # 10 mm deadband
+    LOOP_HZ = 20
     LOOP_DT = 1.0 / LOOP_HZ
 
     # --- Connection URLs ---
     plc_url = "opc.tcp://192.168.0.1:4840"
     robot_url = "opc.tcp://192.168.0.20:16448"
-
+    postcp_index = 0
     # --- Start camera and model ---
     camera = RealSenseStream(fps=30, width=1280, height=720)
     camera.start()
@@ -87,11 +87,28 @@ def main():
                             dx = np.clip(dx, -0.02, 0.02)
                             dz = np.clip(dz, -0.02, 0.02)
 
-                            plc.send_coordinates(
-                                x=dx * 1000,  # m → mm
-                                y=0,
-                                z=dz * 1000
-                            )
+                            if postcp_index == 0:
+                                plc.send_coordinates0(
+                                    x=dx * 1000,  # m → mm
+                                    y=0,
+                                    z=dz * 1000
+                                )
+                            if postcp_index == 1:
+                                plc.send_coordinates1(
+                                    x=dx * 1000,  # m → mm
+                                    y=0,
+                                    z=dz * 1000
+                                )
+                            if postcp_index == 2:
+                                plc.send_coordinates2(
+                                    x=dx * 1000,  # m → mm
+                                    y=0,
+                                    z=dz * 1000
+                                )
+
+                            postcp_index += 1
+                            if postcp_index > 3:
+                                postcp_index = 0
 
                             # Short, safe trigger pulse
                             plc.set_trigger(True)
@@ -110,7 +127,9 @@ def main():
 
         finally:
             logging.info("[Main] Cleaning up...")
-            plc.send_coordinates(x=0, y=0, z=0)
+            plc.send_coordinates0(x=0, y=0, z=0)
+            plc.send_coordinates1(x=0, y=0, z=0)
+            plc.send_coordinates2(x=0, y=0, z=0)
             detection_worker.stop()
             camera.stop()
             logging.info("[Main] All threads stopped cleanly.")

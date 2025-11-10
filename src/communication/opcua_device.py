@@ -58,17 +58,48 @@ class PLCClient(OPCUADevice):
             self.init_nodes()
 
     def init_nodes(self):
-        """Initialize PLC-specific nodes."""
+        
         self.node_x = self.get_node('ns=4;i=2')
         self.node_y = self.get_node('ns=4;i=3')
         self.node_z = self.get_node('ns=4;i=4')
+
         self.node_trigger = self.get_node('ns=4;i=5')
+
+        """Initialize PLC-specific nodes."""
+        self.node_x0 = self.get_node('ns=4;i=581')
+        self.node_y0 = self.get_node('ns=4;i=582')
+        self.node_z0 = self.get_node('ns=4;i=583')
+        
+
+        self.node_x1 = self.get_node('ns=4;i=604')
+        self.node_y1 = self.get_node('ns=4;i=605')
+        self.node_z1 = self.get_node('ns=4;i=606')
+
+        self.node_x2 = self.get_node('ns=4;i=625')
+        self.node_y2 = self.get_node('ns=4;i=626')
+        self.node_z2 = self.get_node('ns=4;i=627')
         # self.node_ack = self.get_node("ns=3;s='VisionData'.'Ack'")
 
     def send_coordinates(self, x, y, z):
         for node, val in zip((self.node_x, self.node_y, self.node_z), (x, y, z)):
             node.set_value(ua.Variant(val, ua.VariantType.Float))
         print(f"📤 Sent coordinates to PLC: ({x:.3f}, {y:.3f}, {z:.3f})")
+
+    def send_coordinates0(self, x, y, z):
+        for node, val in zip((self.node_x0, self.node_y0, self.node_z0), (x, y, z)):
+            node.set_value(ua.Variant(val, ua.VariantType.Float))
+        print(f"📤 Sent coordinates to PosTCP0 PLC: ({x:.3f}, {y:.3f}, {z:.3f})")
+
+    def send_coordinates1(self, x, y, z):
+        for node, val in zip((self.node_x1, self.node_y1, self.node_z1), (x, y, z)):
+            node.set_value(ua.Variant(val, ua.VariantType.Float))
+        print(f"📤 Sent coordinates to PosTCP1 PLC: ({x:.3f}, {y:.3f}, {z:.3f})")
+    
+    def send_coordinates2(self, x, y, z):
+        for node, val in zip((self.node_x2, self.node_y2, self.node_z2), (x, y, z)):
+            node.set_value(ua.Variant(val, ua.VariantType.Float))
+        print(f"📤 Sent coordinates to PosTCP2 PLC: ({x:.3f}, {y:.3f}, {z:.3f})")
+
 
     def set_trigger(self, value: bool):
         self.node_trigger.set_value(ua.Variant(value, ua.VariantType.Boolean))

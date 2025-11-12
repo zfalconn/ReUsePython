@@ -30,28 +30,48 @@ def tf_camera_to_gripper(point_cam,
     point_gripper = R_gc @ point_cam + t_gc
     return point_gripper.flatten()
 
-def select_target(detections, target_class):
-    filtered = [d for d in detections if d["class_name"] == target_class]
-    if not filtered:
-        return None
-    # pick closest to image center
-    target_detection = min(filtered, key=lambda d: (d["center_2d"][0]-640)**2 + (d["center_2d"][1]-360)**2)
-    return target_detection
+def calc_control_val(error : np.array, last_error : np.array, alpha : float, Kp : float, Kd : float):
+    #Exponential smoothing
+    smoothed_error = alpha * error + (1 - alpha) * smoothed_error
+
+    #PD controller
+    delta_error = smoothed_error - last_error
+    control = Kp * smoothed_error + Kd * delta_error
+
+    #Update error
+    last_error = smoothed_error
+
+    return last_error, control
+    
 
 
-def rotate_point_to_gripper(target_detection):
-    target_detection["xyz_gripper_frame"] = tf_camera_to_gripper(target_detection["xyz"],
-    t_gc=np.array([0.0, 0.0, 0.0])) #only rotate frame, no translation
-    return target_detection
 
-def apply_deadband_and_limits(prev, desired):
-    delta = desired - prev
-    # deadband
-    if np.linalg.norm(delta) < DEADBAND_M:
-        return prev, np.zeros(3)
-    # limit step magnitude
-    norm = np.linalg.norm(delta)
-    if norm > MAX_STEP_M:
-        delta = delta / norm * MAX_STEP_M
-    new = prev + delta
-    return new, delta
+
+
+
+
+# def select_target(detections, target_class):
+#     filtered = [d for d in detections if d["class_name"] == target_class]
+#     if not filtered:
+#         return None
+#     # pick closest to image center
+#     target_detection = min(filtered, key=lambda d: (d["center_2d"][0]-640)**2 + (d["center_2d"][1]-360)**2)
+#     return target_detection
+
+
+# def rotate_point_to_gripper(target_detection):
+#     target_detection["xyz_gripper_frame"] = tf_camera_to_gripper(target_detection["xyz"],
+#     t_gc=np.array([0.0, 0.0, 0.0])) #only rotate frame, no translation
+#     return target_detection
+
+# def apply_deadband_and_limits(prev, desired):
+#     delta = desired - prev
+#     # deadband
+#     if np.linalg.norm(delta) < DEADBAND_M:
+#         return prev, np.zeros(3)
+#     # limit step magnitude
+#     norm = np.linalg.norm(delta)
+#     if norm > MAX_STEP_M:
+#         delta = delta / norm * MAX_STEP_M
+#     new = prev + delta
+#     return new, delta

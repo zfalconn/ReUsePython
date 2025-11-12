@@ -12,12 +12,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from src.vision.realsense_stream import RealSenseStream
 from src.vision.pipeline_workers import DetectionWorker, DisplayWorker
 from src.communication.opcua_device import PLCClient, Yaskawa_YRC1000
+from src.vision.visual_controller import calc_control_val
 
 def main():
     # --- Control parameters ---
     Kp = 0.2
     Kd = 0.4
-    alpha = 0.32       # smoothing factor (0–1)
+    ALPHA = 0.32       # smoothing factor (0–1)
     DEADBAND_M = 0.02  # 10 mm deadband
     LOOP_HZ = 20
     LOOP_DT = 1.0 / LOOP_HZ
@@ -37,6 +38,7 @@ def main():
         camera=camera,
         max_queue_size=1,
         display=True,
+        limit_box=False,
         conf=0.8
     )
     display_worker = DisplayWorker(detection_worker.annotated_image_queue)
@@ -68,16 +70,17 @@ def main():
                     cx, cy = housing_detection["center_2d"]
 
                     # Only act if object is roughly centered in camera view
-                    if (640 - 400) < cx < (640 + 400) and (360 - 200) < cy < (360 + 200):
+                    if (640 - 400) < cx < (640 + 400) and (360 - 250) < cy < (360 + 250):
                         # Object offset in gripper frame (error signal)
                         error = np.array(housing_detection["xyz_gripper_frame"])
 
-                        # --- Exponential smoothing ---
-                        smoothed_error = alpha * error + (1 - alpha) * smoothed_error
+                        last_error, control = calc_control_val(error, last_error,ALPHA,Kp,Kd)
+                        # # --- Exponential smoothing ---
+                        # smoothed_error = alpha * error + (1 - alpha) * smoothed_error
 
-                        # --- PD control ---
-                        delta_error = smoothed_error - last_error
-                        control = Kp * smoothed_error + Kd * delta_error
+                        # # --- PD control ---
+                        # delta_error = smoothed_error - last_error
+                        # control = Kp * smoothed_error + Kd * delta_error
 
                         # --- Deadband check ---
                         if np.linalg.norm(control) > DEADBAND_M:
@@ -116,7 +119,7 @@ def main():
                             plc.set_trigger(False)
 
                         # Update memory
-                        last_error = smoothed_error
+                        #last_error = smoothed_error
 
                 # --- Maintain control frequency ---
                 elapsed = time.time() - loop_start
@@ -127,9 +130,9 @@ def main():
 
         finally:
             logging.info("[Main] Cleaning up...")
-            plc.send_coordinates0(x=0, y=0, z=0)
-            plc.send_coordinates1(x=0, y=0, z=0)
-            plc.send_coordinates2(x=0, y=0, z=0)
+            # plc.send_coordinates0(x=0, y=0, z=0)
+            # plc.send_coordinates1(x=0, y=0, z=0)
+            # plc.send_coordinates2(x=0, y=0, z=0)
             detection_worker.stop()
             camera.stop()
             logging.info("[Main] All threads stopped cleanly.")

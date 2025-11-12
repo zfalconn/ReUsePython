@@ -15,7 +15,7 @@ from ..utils.queue_helper import put_latest
 # -------------------------
 
 class DetectionWorker(threading.Thread):
-    def __init__(self, model, camera: RealSenseStream, max_queue_size=1, display=False, **yolo_args):
+    def __init__(self, model, camera: RealSenseStream, max_queue_size=1, display=False, limit_box=True, **yolo_args):
         super().__init__(daemon=True)
         self.model = model
         self.camera = camera
@@ -25,6 +25,8 @@ class DetectionWorker(threading.Thread):
         self.annotated_image_queue = Queue(maxsize=max_queue_size)
 
         self._display = display
+        self._limit_box = limit_box
+
         self.running = False
         self.yolo_args = yolo_args
 
@@ -59,9 +61,12 @@ class DetectionWorker(threading.Thread):
             )
 
             if self._display:
-                color_annotated = draw_detection(color_image, detections)
+                color_annotated = draw_detection(color_image, detections, self._limit_box)
 
                 depth_colored = colorize_depth(depth_frame=depth_frame, depth_scale=depth_scale)
+            else:
+                color_annotated = color_image
+                depth_colored = depth_frame
 
 
             put_latest(self.detections_queue, detections)

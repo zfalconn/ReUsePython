@@ -15,17 +15,12 @@ from ..utils.queue_helper import put_latest
 # -------------------------
 
 class DetectionWorker(threading.Thread):
-    def __init__(self, model, camera: RealSenseStream, max_queue_size=1, display=False, obb = False, limit_box=True, **yolo_args):
+    def __init__(self, model, camera: RealSenseStream, max_queue_size=1, obb = False, **yolo_args):
         super().__init__(daemon=True)
         self.model = model
-        self.camera = camera
+        self._camera = camera
         
-        self.frame_queue = camera.frame_queue
-        self.detections_queue = Queue(maxsize=max_queue_size)
-        self.annotated_image_queue = Queue(maxsize=max_queue_size)
-
-        self._display = display
-        self._limit_box = limit_box
+        self._detections_queue = Queue(maxsize=max_queue_size)
         self._obb = obb
 
         self.running = False
@@ -35,13 +30,15 @@ class DetectionWorker(threading.Thread):
 
     def run(self):
         self.running = True
-        depth_scale = self.camera.depth_scale
-        intrinsics = self.camera.depth_intrinsics
-        width, height = self.camera.width, self.camera.height
-        self.det_logger.info("Thread started")
+        
+        intrinsics = self._camera.depth_intrinsics
+        width, height = self._camera.width, self._camera.height
+
+        self.det_logger.info("Detection Thread started")
+       
         while self.running:
             try:
-                frame = self.camera.get_latest_frame()
+                frame = self._camera.get_latest_frame()
                 if frame is None:
                     continue
                 color_frame, depth_frame = frame
@@ -49,7 +46,6 @@ class DetectionWorker(threading.Thread):
             except Empty:
                 continue
 
-            color_image = np.asanyarray(color_frame.get_data())
             if not self._obb:
                 detections = detection_xyz(
                     self.model,
@@ -60,14 +56,6 @@ class DetectionWorker(threading.Thread):
                     img_height=height,
                     **self.yolo_args
                 )
-
-                if self._display:
-                    color_annotated = draw_detection(color_image, detections, self._limit_box)
-
-                    depth_colored = colorize_depth(depth_frame=depth_frame, depth_scale=depth_scale)
-                else:
-                    color_annotated = color_image
-                    depth_colored = depth_frame
             
             if self._obb:
                 detections = detection_xyz_obb(
@@ -80,16 +68,7 @@ class DetectionWorker(threading.Thread):
                     **self.yolo_args
                 )
 
-                if self._display:
-                    color_annotated = draw_detection_obb(color_image, detections, self._limit_box)
-
-                    depth_colored = colorize_depth(depth_frame=depth_frame, depth_scale=depth_scale)
-                else:
-                    color_annotated = color_image
-                    depth_colored = depth_frame
-
-            put_latest(self.detections_queue, detections)
-            put_latest(self.annotated_image_queue, (color_annotated,depth_colored))
+            put_latest(self._detections_queue, detections)
 
         self.det_logger.info("Detection stop")
 
@@ -97,26 +76,53 @@ class DetectionWorker(threading.Thread):
         self.running = False
         self.join()
 
+    @property
+    def detections_queue(self):
+        return self._detections_queue
+
+
 class DisplayWorker(threading.Thread):
-    def __init__(self, annotated_image_queue : Queue):
+    def __init__(self, camera : RealSenseStream, detections_queue : Queue, obb = False, limit_box=True):
         super().__init__(daemon=True)
         self.running = False
-        self._annotated_image_queue = annotated_image_queue
+        
+        self._camera = camera
+        self._detections_queue = detections_queue
+
+        self._obb = obb
+        self._limit_box = limit_box
 
         self.display_logger = logging.getLogger(self.__class__.__name__)
 
         
     def run(self):
         self.running = True
-        self.display_logger.info("Thread start")
+        self.display_logger.info("Dsiplay Thread start")
+       
         while self.running:
             try:
-                annotated_image = self._annotated_image_queue.get()
-                annotated_color, annotated_depth = annotated_image
+                frame = self._camera.get_latest_frame()
+                if frame is None:
+                    continue
+                color_frame, depth_frame = frame
+                color_image = np.asanyarray(color_frame.get_data())
+
             except Empty:
                 continue
-            cv2.imshow("YOLO Detections with XYZ coordinate", annotated_color)
-            cv2.imshow("Depth Map", annotated_depth)
+
+            detections = self._detections_queue.get()
+                
+            if not self._obb:
+                color_annotated = draw_detection(color_image, detections, self._limit_box)
+                
+
+            if self._obb:
+                color_annotated = draw_detection_obb(color_image, detections, self._limit_box)
+
+            depth_colored = colorize_depth(depth_frame=depth_frame, depth_scale=self._camera.depth_scale)
+
+            cv2.imshow("YOLO Detections with XYZ coordinate", color_annotated)
+            cv2.imshow("Depth Map", depth_colored)
             
             if cv2.waitKey(1) == 27:  # ESC
                 self.running = False

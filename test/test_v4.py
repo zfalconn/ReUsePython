@@ -39,7 +39,8 @@ def main():
         max_queue_size=1,
         display=True,
         limit_box=False,
-        conf=0.8
+        conf=0.8,
+        imgsz=640
     )
     display_worker = DisplayWorker(detection_worker.annotated_image_queue)
 
@@ -130,9 +131,9 @@ def main():
 
         finally:
             logging.info("[Main] Cleaning up...")
-            # plc.send_coordinates0(x=0, y=0, z=0)
-            # plc.send_coordinates1(x=0, y=0, z=0)
-            # plc.send_coordinates2(x=0, y=0, z=0)
+            plc.send_coordinates0(x=0, y=0, z=0)
+            plc.send_coordinates1(x=0, y=0, z=0)
+            plc.send_coordinates2(x=0, y=0, z=0)
             detection_worker.stop()
             camera.stop()
             logging.info("[Main] All threads stopped cleanly.")

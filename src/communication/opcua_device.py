@@ -80,6 +80,9 @@ class PLCClient(OPCUADevice):
         self.node_z2 = self.get_node('ns=4;i=627')
         # self.node_ack = self.get_node("ns=3;s='VisionData'.'Ack'")
 
+    
+
+
     def send_coordinates(self, x, y, z):
         for node, val in zip((self.node_x, self.node_y, self.node_z), (x, y, z)):
             node.set_value(ua.Variant(val, ua.VariantType.Float))

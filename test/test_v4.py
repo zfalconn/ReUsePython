@@ -12,16 +12,22 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from src.vision.realsense_stream import RealSenseStream
 from src.vision.pipeline_workers import DetectionWorker, DisplayWorker
 from src.communication.opcua_device import PLCClient, Yaskawa_YRC1000
-from src.vision.visual_controller import calc_control_val
+from src.vision.visual_controller import calc_control_val, check_stability
 
 def main():
     # --- Control parameters ---
     Kp = 0.2
     Kd = 0.4
     ALPHA = 0.32       # smoothing factor (0–1)
-    DEADBAND_M = 0.02  # 10 mm deadband
+    DEADBAND_M = 0.001  # 10 mm deadband
     LOOP_HZ = 20
     LOOP_DT = 1.0 / LOOP_HZ
+
+    STABILITY_THRESHOLD = 0.005    # 5 mm in meters
+    STABILITY_TIME = 5.0           # seconds required for stability
+
+    stable_timer_start = None
+    is_stable = False
 
     # --- Connection URLs ---
     plc_url = "opc.tcp://192.168.0.1:4840"
@@ -32,28 +38,35 @@ def main():
     camera.start()
 
     model = YOLO(r"models/focus1/retrain/train3/weights/best_morrow_251020.pt")
-
+    #model = YOLO(r"models\focus1\retrain_obb_251113\train6\weights\morrow_obb_251119.pt")
+    is_obb = False
     detection_worker = DetectionWorker(
         model=model,
         camera=camera,
         max_queue_size=1,
-        display=True,
-        limit_box=False,
+        obb=is_obb,
         conf=0.8,
         imgsz=640
     )
-    display_worker = DisplayWorker(detection_worker.annotated_image_queue)
+    display_worker = DisplayWorker(
+        camera=camera,
+        detections_queue=detection_worker.detections_queue,
+        obb=is_obb,
+        limit_box=True
+    )
 
     detection_worker.start()
     display_worker.start()
 
-    # --- Initialize control state ---
-    last_error = np.zeros(3)
-    smoothed_error = np.zeros(3)
-
     with Yaskawa_YRC1000(robot_url) as robot, PLCClient(plc_url) as plc:
         try:
             logging.info("[Main] Visual servo control loop started.")
+            # --- Initialize control state ---
+            last_error = np.zeros(3)
+            smoothed_error = np.zeros(3)
+            stable_timer_start = None
+            is_stable = False
+
             while display_worker.running:
                 loop_start = time.time()
                 try:
@@ -61,7 +74,7 @@ def main():
                 except Empty:
                     continue
 
-                # --- Select the target object ---
+                # Filter detection for battery housing
                 housing_detection = next(
                     (det for det in detections if det["class_name"] == "battery_housing"),
                     None
@@ -70,23 +83,38 @@ def main():
                 if housing_detection:
                     cx, cy = housing_detection["center_2d"]
 
-                    # Only act if object is roughly centered in camera view
+                    # Check if within limit box
                     if (640 - 400) < cx < (640 + 400) and (360 - 250) < cy < (360 + 250):
                         # Object offset in gripper frame (error signal)
                         error = np.array(housing_detection["xyz_gripper_frame"])
-
                         last_error, control = calc_control_val(error, last_error,ALPHA,Kp,Kd)
-                        # # --- Exponential smoothing ---
-                        # smoothed_error = alpha * error + (1 - alpha) * smoothed_error
+                        control_xz = np.array([control[0], control[2]])
+                        control_y = np.array([control[1]])
+                        error_xz = np.array([error[0], error[2]])
+                        error_mag_xz = np.linalg.norm(error_xz)
+                        # --- Stability detection logic (X/Z only) ---
 
-                        # # --- PD control ---
-                        # delta_error = smoothed_error - last_error
-                        # control = Kp * smoothed_error + Kd * delta_error
+                        # stable_timer_start, is_stable = check_stability(
+                        #     error_mag_xz,
+                        #     STABILITY_THRESHOLD,
+                        #     STABILITY_TIME,
+                        #     stable_timer_start,
+                        #     is_stable
+                        # )
+
+                        if is_stable:
+                            plc.set_breakloop(True)
+                            plc.send_coordinates3(
+                                x = 0,
+                                y = control_y * 1000,
+                                z = 0
+                            )
+
 
                         # --- Deadband check ---
-                        if np.linalg.norm(control) > DEADBAND_M:
-                            dx, dy, dz = control.tolist()
-
+                        if np.linalg.norm(control_xz) > DEADBAND_M:
+                            #dx, dy, dz = control.tolist() #Delta xyz
+                            dx, dz = control_xz.tolist()
                             # Clamp movement per step (e.g. ≤ 20 mm)
                             dx = np.clip(dx, -0.02, 0.02)
                             dz = np.clip(dz, -0.02, 0.02)
@@ -114,9 +142,12 @@ def main():
                             if postcp_index > 3:
                                 postcp_index = 0
 
+
+
+
                             # Short, safe trigger pulse
                             plc.set_trigger(True)
-                            # time.sleep(0.02)
+                            #time.sleep(0.02)
                             plc.set_trigger(False)
 
                         # Update memory

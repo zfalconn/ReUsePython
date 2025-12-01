@@ -58,10 +58,10 @@ def detection_xyz(model: YOLO, color_frame, depth_frame, intrinsics, img_width, 
                 "class_id": cls,
                 "class_name": model.names[cls],
                 "confidence": conf,
-                "bbox": [x1, y1, x2, y2],
-                "center_2d": [cx, cy],
-                "xyz": point_3d ,
-                "xyz_gripper_frame": point_3d_gripper,
+                "bbox": [x1, y1, x2, y2], #pixel
+                "center_2d": [cx, cy], #pixel 
+                "xyz": point_3d , #m
+                "xyz_gripper_frame": point_3d_gripper, #m
             })
 
     return detections

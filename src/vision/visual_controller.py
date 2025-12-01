@@ -1,10 +1,7 @@
 import math
 import numpy as np
-
-CONTROL_HZ = 20.0 
-DEADBAND_M = 0.005   
-MAX_STEP_M = 0.005  
-
+import time
+import logging
 def tf_camera_to_gripper(point_cam, 
                         R_gc = np.array([
                             [0, -1, 0],
@@ -32,7 +29,7 @@ def tf_camera_to_gripper(point_cam,
 
 def calc_control_val(error : np.array, last_error : np.array, alpha : float, Kp : float, Kd : float):
     #Exponential smoothing
-    smoothed_error = alpha * error + (1 - alpha) * smoothed_error
+    smoothed_error = alpha * error + (1 - alpha) * last_error
 
     #PD controller
     delta_error = smoothed_error - last_error
@@ -43,7 +40,30 @@ def calc_control_val(error : np.array, last_error : np.array, alpha : float, Kp 
 
     return last_error, control
     
+def check_stability(error_mag, threshold, stability_time, 
+                    stable_timer_start, is_stable):
 
+    # Inside stable threshold
+    if error_mag < threshold:
+
+        # First moment inside stable region
+        if stable_timer_start is None:
+            stable_timer_start = time.time()
+            return stable_timer_start, is_stable
+
+        # Compute duration inside stable window
+        elapsed = time.time() - stable_timer_start
+        logging.info(f"[Time] {elapsed:.3f} seconds")
+
+        # If threshold time reached
+        if elapsed >= stability_time:
+            is_stable = True
+
+        return stable_timer_start, is_stable
+
+    # Outside threshold: reset state
+    else:
+        return None, False
 
 
 

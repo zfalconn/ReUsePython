@@ -51,17 +51,18 @@ class Yaskawa_YRC1000:
 
 
 def main():
-    robot_url = "opc.tcp://192.168.0.20:16448"
 
-    robot = Yaskawa_YRC1000(robot_url)
-    print("robot initialized")
-    print(robot.get_available_jobs())
-    print(robot.set_servo(True))
-    print(robot.start_job('TICTACTOE_X0_HOME_PLAY', block=True))
- #   print(robot.start_job("BASE2TOBASE1", block=True))
-    print(robot.set_servo(False))
-    robot.stop_communication()
-    print('Program ended.')
+    robot_url = "opc.tcp://192.168.0.20:16448"
+    with Yaskawa_YRC1000(robot_url) as robot:
+        print("robot initialized")
+        print(robot.get_available_jobs())
+        
+        print(robot.set_servo(True))
+        print(robot.start_job('TICTACTOE_X0_HOME_PLAY', block=True))
+    #   print(robot.start_job("BASE2TOBASE1", block=True))
+        print(robot.set_servo(False))
+        robot.stop_communication()
+        print('Program ended.')
 if __name__ == "__main__":
     import logging
     logging.basicConfig(level=logging.INFO)

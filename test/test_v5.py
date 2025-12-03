@@ -23,7 +23,7 @@ def main():
     LOOP_HZ = 15
     LOOP_DT = 1.0 / LOOP_HZ
 
-    STABILITY_THRESHOLD = 0.003   # 5 mm in meters
+    STABILITY_THRESHOLD = 0.005   # 5 mm in meters
     STABILITY_TIME = 2.0          # seconds required for stability
 
     stable_timer_start = None
@@ -66,9 +66,14 @@ def main():
             smoothed_error = np.zeros(3)
             stable_timer_start = None
             is_stable = False
+            plc.set_breakloop(False)
+            control_xz = np.zeros(2)   # Predefine
+            error = np.zeros(3)
 
             while display_worker.running:
                 loop_start = time.time()
+                
+                ###------ DETECTION ------###
                 try:
                     detections = detection_worker.detections_queue.get(timeout=0.2)
                 except Empty:
@@ -86,42 +91,36 @@ def main():
                     # Check if within limit box
                     if (640 - 400) < cx < (640 + 400) and (360 - 250) < cy < (360 + 250):
                         # Object offset in gripper frame (error signal)
-                        error = np.array(housing_detection["xyz_gripper_frame"])
+                        error = np.array(housing_detection["xyz_gripper_frame"]) #Error of camera frame but rotated to gripper frame, no shift
+                        error_raw = np.array(housing_detection["xyz"])
                         last_error, control = calc_control_val(error, last_error,ALPHA,Kp,Kd)
                         control_xz = np.array([control[0], control[2]])
                         control_y = error[1]
                         error_xz = np.array([error[0], error[2]])
                         error_mag_xz = np.linalg.norm(error_xz)
                         
-                        # --- Stability detection logic (X/Z only) ---
-                        
-
                         stable_timer_start, is_stable = check_stability(
                             error_mag_xz,
                             STABILITY_THRESHOLD,
                             STABILITY_TIME,
                             stable_timer_start,
                             is_stable
-                        )
+                                ) 
+                        print(is_stable) 
+                        print(error_mag_xz)
 
-                        if is_stable:
-                            dy = control_y
-                            plc.set_trigger(True)
-                            plc.set_trigger(False)
-                            plc.set_breakloop(True)
-                            plc.send_coordinates3(
-                                x = 0,
-                                y = dy,
-                                z = 0
-                            )
-                            plc.set_stepz(True)
-                            plc.set_stepz(False)
+                ###------ ------ ------###
+
+                if is_stable:
+                    plc.set_breakloop(True)
+                    plc.set_trigger(True)
 
 
-
-                        # --- Deadband check ---
-
-                        if not is_stable and np.linalg.norm(control_xz) > DEADBAND_M:
+                state_job = plc.get_state_job()
+                
+                match state_job:
+                    case s if s in [11,12,13]:   
+                        if np.linalg.norm(control_xz) > DEADBAND_M:
                             #dx, dy, dz = control.tolist() #Delta xyz
                             dx, dz = control_xz.tolist()
                             # Clamp movement per step (e.g. ≤ 20 mm)
@@ -157,13 +156,15 @@ def main():
                             plc.set_trigger(True)
                             #time.sleep(0.02)
                             plc.set_trigger(False)
-                            
-                        # plc.set_stepz(True)
-                            
-                        # plc.set_stepz(False)
-                        # Update memory
-                        #last_error = smoothed_error
-
+                    case 14:
+                        error_shifted = tf_camera_to_gripper(error_raw)
+                        dx,dy,dz = error_shifted.tolist()
+                        plc.send_coordinates3(
+                            x=dx*1000,
+                            y=dy*1000,
+                            z=dz*1000)
+                        plc.set_stepz(True)
+                        plc.set_stepz(False)
                 # --- Maintain control frequency ---
                 elapsed = time.time() - loop_start
                 time.sleep(max(0.0, LOOP_DT - elapsed))

@@ -61,7 +61,8 @@ class PLCClient(OPCUADevice):
     
 
         self.node_trigger = self.get_node('ns=4;i=5')
-        self.node_break_loop = self.get_node('ns=4;i=701')
+        self.node_break_loop = self.get_node('ns=3;s="MotoMotion_Instance"."BreakLoop"')
+        self.step_z = self.get_node('ns=3;s="MotoMotion_Instance"."Step_Z"')
 
         """Initialize PLC-specific nodes."""
         self.node_x0 = self.get_node('ns=3;s="MotoLocal"."PosTCP"."TCPPosition"[0]')
@@ -77,9 +78,10 @@ class PLCClient(OPCUADevice):
         self.node_z2 = self.get_node('ns=3;s="MotoLocal"."PosTCP2"."TCPPosition"[2]')
         
         self.node_x3 = self.get_node('ns=3;s="MotoLocal"."PosTCP3"."TCPPosition"[0]')
-        self.node_y3 = self.get_node('ns=3;s="MotoLocal"."PosTCP3"."TCPPosition"[0]')
-        self.node_z3 = self.get_node('ns=3;s="MotoLocal"."PosTCP3"."TCPPosition"[0]')
+        self.node_y3 = self.get_node('ns=3;s="MotoLocal"."PosTCP3"."TCPPosition"[1]')
+        self.node_z3 = self.get_node('ns=3;s="MotoLocal"."PosTCP3"."TCPPosition"[2]')
 
+        self.state_job = self.get_node('ns=3;s="MotoMotion_Instance"."stateJob"')
 
     def send_coordinates0(self, x, y, z):
         for node, val in zip((self.node_x0, self.node_y0, self.node_z0), (x, y, z)):
@@ -87,6 +89,7 @@ class PLCClient(OPCUADevice):
             #node.set_value(ua.Variant(val, ua.VariantType.Float))
 
             #TEST
+
             dv = ua.DataValue(ua.Variant(val,ua.VariantType.Float))
             node.set_value(dv)
         
@@ -112,13 +115,16 @@ class PLCClient(OPCUADevice):
 
     def set_trigger(self, value: bool):
         self.node_trigger.set_value(ua.Variant(value, ua.VariantType.Boolean))
-        print("Sent")
+        print("Sent Step")
 
     def set_breakloop(self, value: bool):
-        self.node_break_loop.set_value(ua.Variant(value, ua.VariantType.Boolean))
+        self.node_break_loop.set_value(ua.DataValue(ua.Variant(value, ua.VariantType.Boolean)))
 
-    # def get_ack(self) -> bool:
-    #     return self.node_ack.get_value()
+    def set_stepz(self, value: bool):
+        self.step_z.set_value(ua.DataValue(ua.Variant(value, ua.VariantType.Boolean)))
+
+    def get_state_job(self):
+        return self.state_job.get_value()
 
 
 # ────────────────────────────────────────────────────────────────

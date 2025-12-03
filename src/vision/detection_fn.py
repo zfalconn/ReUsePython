@@ -10,6 +10,7 @@ import math
 
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from src.vision.visual_controller import tf_camera_to_gripper
 
 
 def detection_xyz(model: YOLO, color_frame, depth_frame, intrinsics, img_width, img_height, **yolo_args):
@@ -252,30 +253,30 @@ def draw_detection_obb(color_image, detections, limit_box=True):
     return color_image
 
 
-def tf_camera_to_gripper(point_cam, 
-                        R_gc = np.array([
-                            [0, -1, 0],
-                            [0,  0, 1],
-                            [-1, 0, 0]
-                        ]), 
-                        t_gc = np.array([0.085, -0.220, 0.040])):
-    """
-    Transform a 3D point from the camera frame to the gripper frame.
+# def tf_camera_to_gripper(point_cam, 
+#                         R_gc = np.array([
+#                             [0, -1, 0],
+#                             [0,  0, 1],
+#                             [-1, 0, 0]
+#                         ]), 
+#                         t_gc = np.array([0.085, -0.220, 0.040])):
+#     """
+#     Transform a 3D point from the camera frame to the gripper frame.
 
-    Args:
-        point_cam (array-like): [x, y, z] in camera frame
-        R_gc (np.ndarray): 3x3 rotation matrix from camera to gripper
-        t_gc (array-like): 3x1 translation vector from camera to gripper
+#     Args:
+#         point_cam (array-like): [x, y, z] in camera frame
+#         R_gc (np.ndarray): 3x3 rotation matrix from camera to gripper
+#         t_gc (array-like): 3x1 translation vector from camera to gripper
 
-    Returns:
-        np.ndarray: [x, y, z] in gripper frame
-    """
-    point_cam = np.array(point_cam).reshape(3, 1)
-    R_gc = np.array(R_gc).reshape(3, 3)
-    t_gc = np.array(t_gc).reshape(3, 1)
+#     Returns:
+#         np.ndarray: [x, y, z] in gripper frame
+#     """
+#     point_cam = np.array(point_cam).reshape(3, 1)
+#     R_gc = np.array(R_gc).reshape(3, 3)
+#     t_gc = np.array(t_gc).reshape(3, 1)
 
-    point_gripper = R_gc @ point_cam + t_gc
-    return point_gripper.flatten()
+#     point_gripper = R_gc @ point_cam + t_gc
+#     return point_gripper.flatten()
 
 def get_object_angle(mask: np.ndarray) -> float:
     """

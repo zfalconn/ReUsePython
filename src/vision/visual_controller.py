@@ -8,7 +8,7 @@ def tf_camera_to_gripper(point_cam,
                             [0,  0, 1],
                             [-1, 0, 0]
                         ]), 
-                        t_gc = np.array([0.085, -0.220, 0.040])):
+                        t_gc = np.array([0.065, -0.125, 0.020])):
     """
     Transform a 3D point from the camera frame to the gripper frame.
 

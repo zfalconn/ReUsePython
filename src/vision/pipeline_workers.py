@@ -82,7 +82,7 @@ class DetectionWorker(threading.Thread):
 
 
 class DisplayWorker(threading.Thread):
-    def __init__(self, camera : RealSenseStream, detections_queue : Queue, obb = False, limit_box=True):
+    def __init__(self, camera : RealSenseStream, detections_queue : Queue, obb = False, limit_box=True, depth=False):
         super().__init__(daemon=True)
         self.running = False
         
@@ -90,6 +90,7 @@ class DisplayWorker(threading.Thread):
         self._detections_queue = detections_queue
 
         self._obb = obb
+        self._depth = depth
         self._limit_box = limit_box
 
         self.display_logger = logging.getLogger(self.__class__.__name__)
@@ -118,11 +119,12 @@ class DisplayWorker(threading.Thread):
 
             if self._obb:
                 color_annotated = draw_detection_obb(color_image, detections, self._limit_box)
-
-            depth_colored = colorize_depth(depth_frame=depth_frame, depth_scale=self._camera.depth_scale)
-
+            
+            if self._depth:
+                depth_colored = colorize_depth(depth_frame=depth_frame, depth_scale=self._camera.depth_scale)
+                cv2.imshow("Depth Map", depth_colored)
             cv2.imshow("YOLO Detections with XYZ coordinate", color_annotated)
-            cv2.imshow("Depth Map", depth_colored)
+            
             
             if cv2.waitKey(1) == 27:  # ESC
                 self.running = False

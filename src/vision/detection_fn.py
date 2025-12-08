@@ -5,10 +5,6 @@ import numpy as np
 import logging
 import torch
 import math
-# import sys
-# import os
-
-# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.vision.visual_controller import tf_camera_to_gripper
 
@@ -32,15 +28,6 @@ def detection_xyz(model: YOLO, color_frame, depth_frame, intrinsics, img_width, 
             cy = int((y1 + y2) / 2)
             cx = max(0, min(cx, img_width - 1))
             cy = max(0, min(cy, img_height - 1))
-
-            # # Angle from opencv
-            # roi = color_image[y1:y2, x1:x2]
-            # gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-            # # _, mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            # edges = cv2.Canny(gray, 50, 150)
-            # mask = cv2.dilate(edges, (3,3), iterations=1)
-            
-            # angle = get_object_angle(mask)
 
             # Depth
             depth = depth_frame.get_distance(cx, cy)
@@ -251,86 +238,6 @@ def draw_detection_obb(color_image, detections, limit_box=True):
         cv2.circle(color_image, (640, 360), 2, (255, 255, 255), -1)
 
     return color_image
-
-
-# def tf_camera_to_gripper(point_cam, 
-#                         R_gc = np.array([
-#                             [0, -1, 0],
-#                             [0,  0, 1],
-#                             [-1, 0, 0]
-#                         ]), 
-#                         t_gc = np.array([0.085, -0.220, 0.040])):
-#     """
-#     Transform a 3D point from the camera frame to the gripper frame.
-
-#     Args:
-#         point_cam (array-like): [x, y, z] in camera frame
-#         R_gc (np.ndarray): 3x3 rotation matrix from camera to gripper
-#         t_gc (array-like): 3x1 translation vector from camera to gripper
-
-#     Returns:
-#         np.ndarray: [x, y, z] in gripper frame
-#     """
-#     point_cam = np.array(point_cam).reshape(3, 1)
-#     R_gc = np.array(R_gc).reshape(3, 3)
-#     t_gc = np.array(t_gc).reshape(3, 1)
-
-#     point_gripper = R_gc @ point_cam + t_gc
-#     return point_gripper.flatten()
-
-def get_object_angle(mask: np.ndarray) -> float:
-    """
-    Compute the orientation angle of an object from its binary mask.
-    
-    Args:
-        mask (np.ndarray): Binary image (0 or 255) where the object is white.
-    
-    Returns:
-        float: Angle in degrees. 0° = horizontal, increasing counterclockwise.
-    """
-    # Find contours
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if not contours:
-        return None
-
-    # Use the largest contour (assuming main object)
-    contour = max(contours, key=cv2.contourArea)
-
-    # Fit a rotated rectangle
-    rect = cv2.minAreaRect(contour)
-    angle = rect[-1]
-
-    # Normalize OpenCV angle convention
-    # cv2.minAreaRect returns angle in range [-90, 0)
-    if angle < -45:
-        angle = 90 + angle
-
-    return angle
-
-def draw_orientation_arrow(image: np.ndarray, rect_center: tuple, angle: float, length: int = 50):
-    """
-    Draws an arrow indicating object orientation.
-
-    Args:
-        image (np.ndarray): The original image.
-        rect_center (tuple): (x, y) center of the object.
-        angle (float): Orientation angle in degrees.
-        length (int): Length of the arrow to draw.
-    """
-    x, y = rect_center
-    # Convert angle to radians
-    theta = np.deg2rad(angle)
-
-    # Compute arrow end point
-    x2 = int(x + length * np.cos(theta))
-    y2 = int(y - length * np.sin(theta))  # y-axis is inverted in images
-
-    # Draw arrow
-    cv2.arrowedLine(image, (int(x), int(y)), (x2, y2), (0, 0, 255), 2, tipLength=0.3)
-
-    # Draw angle label
-    cv2.putText(image, f"{angle:.1f}°", (int(x) + 10, int(y) - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 if __name__ == "__main__":
     model = YOLO(r"..\models\focus1\Focus1_YOLO11n_x1024_14112024_ncnn_model")

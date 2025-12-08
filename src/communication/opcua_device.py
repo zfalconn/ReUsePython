@@ -62,9 +62,10 @@ class PLCClient(OPCUADevice):
 
         self.node_trigger = self.get_node('ns=4;i=5')
         self.node_break_loop = self.get_node('ns=3;s="MotoMotion_Instance"."BreakLoop"')
-        self.step_z = self.get_node('ns=3;s="MotoMotion_Instance"."Step_Z"')
+        self.node_step_z = self.get_node('ns=3;s="MotoMotion_Instance"."Step_Z"')
+        self.node_closegripper = self.get_node('ns=3;s="MotoMotion_Instance"."CloseGrip"')
 
-        """Initialize PLC-specific nodes."""
+        """Movement Nodes"""
         self.node_x0 = self.get_node('ns=3;s="MotoLocal"."PosTCP"."TCPPosition"[0]')
         self.node_y0 = self.get_node('ns=3;s="MotoLocal"."PosTCP"."TCPPosition"[1]')
         self.node_z0 = self.get_node('ns=3;s="MotoLocal"."PosTCP"."TCPPosition"[2]')
@@ -80,7 +81,7 @@ class PLCClient(OPCUADevice):
         self.node_x3 = self.get_node('ns=3;s="MotoLocal"."PosTCP3"."TCPPosition"[0]')
         self.node_y3 = self.get_node('ns=3;s="MotoLocal"."PosTCP3"."TCPPosition"[1]')
         self.node_z3 = self.get_node('ns=3;s="MotoLocal"."PosTCP3"."TCPPosition"[2]')
-
+        self.node_ry3 = self.get_node('ns=3;s="MotoLocal"."PosTCP3"."TCPPosition"[4]')
         self.state_job = self.get_node('ns=3;s="MotoMotion_Instance"."stateJob"')
 
     def send_coordinates0(self, x, y, z):
@@ -107,8 +108,8 @@ class PLCClient(OPCUADevice):
             node.set_value(dv)
         print(f"📤 Sent coordinates to PosTCP2 PLC: ({x:.3f}, {y:.3f}, {z:.3f})")
 
-    def send_coordinates3(self, x, y, z):
-        for node, val in zip((self.node_x3, self.node_y3, self.node_z3), (x, y, z)):
+    def send_coordinates3(self, x, y, z, ry = 0):
+        for node, val in zip((self.node_x3, self.node_y3, self.node_z3, self.node_ry3), (x, y, z, ry)):
             dv = ua.DataValue(ua.Variant(val,ua.VariantType.Float))
             node.set_value(dv)
         print(f"📤 Sent coordinates to PosTCP3 PLC: ({x:.3f}, {y:.3f}, {z:.3f})")
@@ -121,7 +122,10 @@ class PLCClient(OPCUADevice):
         self.node_break_loop.set_value(ua.DataValue(ua.Variant(value, ua.VariantType.Boolean)))
 
     def set_stepz(self, value: bool):
-        self.step_z.set_value(ua.DataValue(ua.Variant(value, ua.VariantType.Boolean)))
+        self.node_step_z.set_value(ua.DataValue(ua.Variant(value, ua.VariantType.Boolean)))
+
+    def set_closegripper(self, value: bool):
+        self.node_closegripper.set_value(ua.DataValue(ua.Variant(value, ua.VariantType.Boolean)))
 
     def get_state_job(self):
         return self.state_job.get_value()

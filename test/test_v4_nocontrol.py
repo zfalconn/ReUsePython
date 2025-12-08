@@ -31,7 +31,7 @@ def main():
     camera = RealSenseStream(fps=30, width=1280, height=720)
     camera.start()
 
-    model = YOLO(r"models\focus1\retrain_obb_251113\train6\weights\morrow_obb_251119.pt")
+    model = YOLO(r"models\focus1\retrain_obb_BIGMAP_251203\train2\weights\morrow_obb_251203.pt")
     #model = YOLO(r"models\focus1\retrain\train3\weights\best_morrow_251020.pt")
 
     detection_worker = DetectionWorker(
@@ -39,7 +39,7 @@ def main():
         camera=camera,
         max_queue_size=1,
         obb=True,
-        conf=0.8,
+        conf=0.85,
         imgsz=640
     )
     display_worker = DisplayWorker(

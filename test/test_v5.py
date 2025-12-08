@@ -58,7 +58,7 @@ def main():
     detection_worker.start()
     display_worker.start()
     # Yaskawa_YRC1000(robot_url) as robot,
-    with  PLCClient(plc_url) as plc:
+    with PLCClient(plc_url) as plc:
         try:
             logging.info("[Main] Visual servo control loop started.")
             # --- Initialize control state ---
@@ -71,19 +71,22 @@ def main():
             error = np.zeros(3)
 
             while display_worker.running:
-                loop_start = time.time()
+                
                 
                 ###------ DETECTION ------###
                 try:
                     detections = detection_worker.detections_queue.get(timeout=0.2)
-                except Empty:
-                    continue
 
-                # Filter detection for battery housing
-                housing_detection = next(
+                    # Filter detection for battery housing
+                    housing_detection = next(
                     (det for det in detections if det["class_name"] == "battery_housing"),
                     None
                 )
+                except Empty:
+                    continue
+
+                
+                
 
                 if housing_detection:
                     cx, cy = housing_detection["center_2d"]
@@ -95,9 +98,10 @@ def main():
                         error_raw = np.array(housing_detection["xyz"])
                         last_error, control = calc_control_val(error, last_error,ALPHA,Kp,Kd)
                         control_xz = np.array([control[0], control[2]])
-                        control_y = error[1]
+                        #control_y = error[1]
                         error_xz = np.array([error[0], error[2]])
                         error_mag_xz = np.linalg.norm(error_xz)
+                        angle_degree = housing_detection["long_side_normalized"]
                         
                         stable_timer_start, is_stable = check_stability(
                             error_mag_xz,
@@ -119,7 +123,10 @@ def main():
                 state_job = plc.get_state_job()
                 
                 match state_job:
-                    case s if s in [11,12,13]:   
+                    case s if s in [11,12,13]:
+
+                        loop_start = time.time() 
+
                         if np.linalg.norm(control_xz) > DEADBAND_M:
                             #dx, dy, dz = control.tolist() #Delta xyz
                             dx, dz = control_xz.tolist()
@@ -156,18 +163,23 @@ def main():
                             plc.set_trigger(True)
                             #time.sleep(0.02)
                             plc.set_trigger(False)
+
+                        # --- Maintain control frequency ---
+                        elapsed = time.time() - loop_start
+                        time.sleep(max(0.0, LOOP_DT - elapsed))
                     case 14:
                         error_shifted = tf_camera_to_gripper(error_raw)
                         dx,dy,dz = error_shifted.tolist()
                         plc.send_coordinates3(
                             x=dx*1000,
                             y=dy*1000,
-                            z=dz*1000)
+                            z=dz*1000,
+                            ry=-angle_degree)
                         plc.set_stepz(True)
                         plc.set_stepz(False)
-                # --- Maintain control frequency ---
-                elapsed = time.time() - loop_start
-                time.sleep(max(0.0, LOOP_DT - elapsed))
+                    case 15:
+                        plc.set_closegripper(True)
+                        plc.set_closegripper(False)
 
         except KeyboardInterrupt:
             logging.info("[Main] Keyboard interrupt detected. Stopping...")

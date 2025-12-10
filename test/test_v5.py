@@ -34,30 +34,35 @@ def main():
     robot_url = "opc.tcp://192.168.0.20:16448"
     postcp_index = 0
     # --- Start camera and model ---
-    camera = RealSenseStream(fps=30, width=1280, height=720)
-    camera.start()
+    try:
+        camera = RealSenseStream(fps=30, width=1280, height=720)
+        camera.start()
+    except Exception as e:
+        print(e)
 
     #model = YOLO(r"models/focus1/retrain/train3/weights/best_morrow_251020.pt")
     model = YOLO(r"models\focus1\retrain_obb_BIGMAP_251203\train2\weights\morrow_obb_251203.pt")
     is_obb = True
-    detection_worker = DetectionWorker(
-        model=model,
-        camera=camera,
-        max_queue_size=1,
-        obb=is_obb,
-        conf=0.85,
-        imgsz=640
-    )
-    display_worker = DisplayWorker(
-        camera=camera,
-        detections_queue=detection_worker.detections_queue,
-        obb=is_obb,
-        limit_box=True
-    )
+    try:
+        detection_worker = DetectionWorker(
+            model=model,
+            camera=camera,
+            max_queue_size=1,
+            obb=is_obb,
+            conf=0.85,
+            imgsz=640
+        )
+        display_worker = DisplayWorker(
+            camera=camera,
+            detections_queue=detection_worker.detections_queue,
+            obb=is_obb,
+            limit_box=True
+        )
 
-    detection_worker.start()
-    display_worker.start()
-    # Yaskawa_YRC1000(robot_url) as robot,
+        detection_worker.start()
+        display_worker.start()
+    except Exception as e:
+        print(e)
     with PLCClient(plc_url) as plc:
         try:
             logging.info("[Main] Visual servo control loop started.")
@@ -69,7 +74,8 @@ def main():
             plc.set_breakloop(False)
             control_xz = np.zeros(2)   # Predefine
             error = np.zeros(3)
-
+            error_raw = np.zeros(3)
+            angle_degree = 0
             while display_worker.running:
                 
                 
@@ -174,13 +180,33 @@ def main():
                             x=dx*1000,
                             y=dy*1000,
                             z=dz*1000,
-                            ry=-angle_degree)
+                            ry=angle_degree if angle_degree else 0)
                         plc.set_stepz(True)
                         plc.set_stepz(False)
                     case 15:
                         plc.set_closegripper(True)
                         plc.set_closegripper(False)
-
+                        time.sleep(3)
+                    case 16:
+                        plc.set_trigger(False)
+                        with Yaskawa_YRC1000(robot_url) as robot:
+                            robot.set_servo(True)
+                            robot.start_job('CAM_HOME', block=True)
+                            robot.start_job('BATTERY_PLACE_MORROW', block=True)
+                        plc.set_trigger(True)
+                        plc.set_trigger(False)
+                    case 17:
+                        plc.set_opengripper(True)
+                        plc.set_opengripper(False)
+                        time.sleep(3)
+                    case 18:
+                        plc.set_trigger(False)
+                        with Yaskawa_YRC1000(robot_url) as robot:
+                            robot.set_servo(True)
+                            robot.start_job('BATTERY_RESET_MORROW', block=True)
+                            robot.start_job('CAM_HOME', block=True)
+                        plc.set_trigger(True)
+                        plc.set_trigger(False)
         except KeyboardInterrupt:
             logging.info("[Main] Keyboard interrupt detected. Stopping...")
 
@@ -189,6 +215,7 @@ def main():
             plc.send_coordinates0(x=0, y=0, z=0)
             plc.send_coordinates1(x=0, y=0, z=0)
             plc.send_coordinates2(x=0, y=0, z=0)
+            robot.set_servo(False)
             detection_worker.stop()
             camera.stop()
             logging.info("[Main] All threads stopped cleanly.")

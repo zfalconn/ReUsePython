@@ -45,6 +45,7 @@ class OPCUADevice:
 
     def __del__(self):
         self.stop_communication()
+        
 
 
 # ────────────────────────────────────────────────────────────────
@@ -64,6 +65,7 @@ class PLCClient(OPCUADevice):
         self.node_break_loop = self.get_node('ns=3;s="MotoMotion_Instance"."BreakLoop"')
         self.node_step_z = self.get_node('ns=3;s="MotoMotion_Instance"."Step_Z"')
         self.node_closegripper = self.get_node('ns=3;s="MotoMotion_Instance"."CloseGrip"')
+        self.node_opengripper = self.get_node('ns=3;s="MotoMotion_Instance"."OpenGrip"')
 
         """Movement Nodes"""
         self.node_x0 = self.get_node('ns=3;s="MotoLocal"."PosTCP"."TCPPosition"[0]')
@@ -126,6 +128,9 @@ class PLCClient(OPCUADevice):
 
     def set_closegripper(self, value: bool):
         self.node_closegripper.set_value(ua.DataValue(ua.Variant(value, ua.VariantType.Boolean)))
+    
+    def set_opengripper(self, value: bool):
+        self.node_opengripper.set_value(ua.DataValue(ua.Variant(value, ua.VariantType.Boolean)))
 
     def get_state_job(self):
         return self.state_job.get_value()

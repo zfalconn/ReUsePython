@@ -107,13 +107,9 @@ def detection_xyz_obb(
             long_side_radian = angle_rad + math.pi / 2
             long_side_degree = angle_deg + 90
 
-        #normalize angle to 0 - 90
+        #normalize angle to -90 - 90
 
-        if 90 < long_side_degree <= 180:
-            long_side_normalized = abs(long_side_degree - 90)
-        else:
-            long_side_normalized = -long_side_degree+90
-        
+        long_side_normalized = long_side_degree - 90
 
         # Depth
         depth = depth_frame.get_distance(cx, cy)
@@ -283,7 +279,7 @@ def draw_detection_obb(color_image, detections, limit_box=True, camera_width = 6
 
         cv2.putText(
             color_image,
-            f"Angle Long Normalized: {long_side_normalized:.1f}°",
+            f"Angle Long Normalized: {long_side_normalized:.2f}°",
             (base_x, base_y + 50),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
